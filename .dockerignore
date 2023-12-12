@@ -1,0 +1,10 @@
+/.devcontainer
+/.github
+/.vscode
+/data
+/target
+.dockerignore
+Cargo.lock
+Dockerfile
+docker-compose.yml
+*.md
