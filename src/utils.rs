@@ -3,9 +3,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::from_reader;
 use serde_json::Value;
 use std::fs::File;
+use wikidata::ClaimValueData;
 use wikidata::{ClaimValue, Entity, Lang, Pid, WikiId};
 
 pub async fn get_entity(path: &str) -> Result<Entity, Error> {
+    // From here - https://www.wikidata.org/wiki/Special:EntityData/P1476.json
     let mut file = File::open(path)?;
     let json: Value = from_reader(&mut file)?;
     let data = Entity::from_json(json).expect("Failed to parse JSON");
@@ -28,7 +30,7 @@ impl Id {
 pub struct EntityMini {
     // In English
     pub label: String,
-    pub claims: Vec<(Pid, ClaimValue)>,
+    pub claims: Vec<(Id, ClaimValueData)>,
     pub description: String,
 }
 
@@ -38,10 +40,34 @@ impl EntityMini {
             get_id(&entity),
             Self {
                 label: get_name(&entity),
-                claims: entity.claims.clone(),
+                claims: Self::flatten_claims(entity.claims.clone()),
                 description: get_description(&entity).unwrap_or("".to_string()),
             },
         )
+    }
+    fn flatten_claims(claims: Vec<(Pid, ClaimValue)>) -> Vec<(Id, ClaimValueData)> {
+        claims
+            .iter()
+            .flat_map(|(pid, claim_value)| {
+                let mut flattened = vec![(
+                    Id {
+                        id: pid.0,
+                        entity_type: "Property".to_string(),
+                    },
+                    claim_value.data.clone(),
+                )];
+                for (qualifier_pid, qualifier_value) in &claim_value.qualifiers {
+                    flattened.push((
+                        Id {
+                            id: qualifier_pid.0,
+                            entity_type: "Property".to_string(),
+                        },
+                        qualifier_value.clone(),
+                    ));
+                }
+                flattened
+            })
+            .collect()
     }
 }
 
