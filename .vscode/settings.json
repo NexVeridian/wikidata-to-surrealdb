@@ -1,4 +1,10 @@
 {
+	"json.format.enable": false,
+	"[json]": {
+		"editor.wordWrap": "off",
+		"editor.formatOnSave": false,
+		"editor.formatOnPaste": false,
+	},
 	"[Rust]": {
 		"editor.defaultFormatter": "rust-lang.rust-analyzer",
 		"editor.formatOnSave": true,

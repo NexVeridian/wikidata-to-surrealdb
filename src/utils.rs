@@ -1,19 +1,7 @@
-use anyhow::{Error, Result};
 use serde::{Deserialize, Serialize};
-use serde_json::from_reader;
-use serde_json::Value;
-use std::fs::File;
 use surrealdb::sql::Thing;
 use wikidata::ClaimValueData;
 use wikidata::{ClaimValue, Entity, Lang, Pid, WikiId};
-
-pub async fn get_entity(path: &str) -> Result<Entity, Error> {
-    // From here - https://www.wikidata.org/wiki/Special:EntityData/P1476.json
-    let mut file = File::open(path)?;
-    let json: Value = from_reader(&mut file)?;
-    let data = Entity::from_json(json).expect("Failed to parse JSON");
-    Ok(data)
-}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EntityMini {
