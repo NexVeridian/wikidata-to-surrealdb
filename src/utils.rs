@@ -45,6 +45,7 @@ impl EntityMini {
             },
         )
     }
+
     fn flatten_claims(claims: Vec<(Pid, ClaimValue)>) -> Vec<(Id, ClaimValueData)> {
         claims
             .iter()
@@ -56,15 +57,18 @@ impl EntityMini {
                     },
                     claim_value.data.clone(),
                 )];
-                for (qualifier_pid, qualifier_value) in &claim_value.qualifiers {
-                    flattened.push((
-                        Id {
-                            id: qualifier_pid.0,
-                            entity_type: "Property".to_string(),
-                        },
-                        qualifier_value.clone(),
-                    ));
-                }
+
+                flattened.extend(claim_value.qualifiers.iter().map(
+                    |(qualifier_pid, qualifier_value)| {
+                        (
+                            Id {
+                                id: qualifier_pid.0,
+                                entity_type: "Property".to_string(),
+                            },
+                            qualifier_value.clone(),
+                        )
+                    },
+                ));
                 flattened
             })
             .collect()
