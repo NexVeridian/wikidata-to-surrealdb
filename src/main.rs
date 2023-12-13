@@ -23,8 +23,8 @@ async fn main() -> Result<(), Error> {
 
     db.use_ns("wikidata").use_db("wikidata").await?;
 
-    let _: Option<EntityMini> = db.delete(id.to_string()).await?;
-    let _: Option<EntityMini> = db.create(id.to_string()).content(data.clone()).await?;
+    let _: Option<EntityMini> = db.delete(&id).await?;
+    let _: Option<EntityMini> = db.create(&id).content(data.clone()).await?;
 
     // println!("{:#?}", data);
     Ok(())

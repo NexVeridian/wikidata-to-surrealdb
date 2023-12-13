@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::from_reader;
 use serde_json::Value;
 use std::fs::File;
+use surrealdb::sql::Thing;
 use wikidata::ClaimValueData;
 use wikidata::{ClaimValue, Entity, Lang, Pid, WikiId};
 
@@ -15,27 +16,15 @@ pub async fn get_entity(path: &str) -> Result<Entity, Error> {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Id {
-    pub entity_type: String,
-    pub id: u64,
-}
-
-impl Id {
-    pub fn to_string(&self) -> (String, String) {
-        (self.entity_type.clone(), self.id.to_string())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EntityMini {
     // In English
     pub label: String,
-    pub claims: Vec<(Id, ClaimValueData)>,
+    pub claims: Vec<(Thing, ClaimValueData)>,
     pub description: String,
 }
 
 impl EntityMini {
-    pub fn from_entity(entity: Entity) -> (Id, Self) {
+    pub fn from_entity(entity: Entity) -> (Thing, Self) {
         (
             get_id(&entity),
             Self {
@@ -46,14 +35,14 @@ impl EntityMini {
         )
     }
 
-    fn flatten_claims(claims: Vec<(Pid, ClaimValue)>) -> Vec<(Id, ClaimValueData)> {
+    fn flatten_claims(claims: Vec<(Pid, ClaimValue)>) -> Vec<(Thing, ClaimValueData)> {
         claims
             .iter()
             .flat_map(|(pid, claim_value)| {
                 let mut flattened = vec![(
-                    Id {
-                        id: pid.0,
-                        entity_type: "Property".to_string(),
+                    Thing {
+                        id: pid.0.into(),
+                        tb: "Property".to_string(),
                     },
                     claim_value.data.clone(),
                 )];
@@ -61,9 +50,9 @@ impl EntityMini {
                 flattened.extend(claim_value.qualifiers.iter().map(
                     |(qualifier_pid, qualifier_value)| {
                         (
-                            Id {
-                                id: qualifier_pid.0,
-                                entity_type: "Property".to_string(),
+                            Thing {
+                                id: qualifier_pid.0.into(),
+                                tb: "Property".to_string(),
                             },
                             qualifier_value.clone(),
                         )
@@ -75,15 +64,15 @@ impl EntityMini {
     }
 }
 
-fn get_id(entity: &Entity) -> Id {
-    let (id, entity_type) = match entity.id {
+fn get_id(entity: &Entity) -> Thing {
+    let (id, tb) = match entity.id {
         WikiId::EntityId(qid) => (qid.0, "Entity".to_string()),
         WikiId::PropertyId(pid) => (pid.0, "Property".to_string()),
         WikiId::LexemeId(lid) => (lid.0, "Lexeme".to_string()),
         _ => todo!("Not implemented"),
     };
 
-    Id { id, entity_type }
+    Thing { id: id.into(), tb }
 }
 
 fn get_name(entity: &Entity) -> String {
