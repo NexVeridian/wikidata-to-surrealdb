@@ -21,7 +21,7 @@ async fn main() -> Result<(), Error> {
 
     db.use_ns("wikidata").use_db("wikidata").await?;
 
-    let file = File::open("data/ex2.json")?;
+    let file = File::open("data/e.json")?;
     let reader = BufReader::new(file);
 
     for line in reader.lines() {

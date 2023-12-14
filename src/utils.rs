@@ -4,8 +4,40 @@ use surrealdb::sql::Thing;
 use wikidata::{ClaimValue, ClaimValueData, Entity, Lang, Pid, WikiId};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ClaimData {
+    Thing(Thing),
+    ClaimValueData(ClaimValueData),
+}
+
+impl ClaimData {
+    fn from_cvd(cvd: ClaimValueData) -> Self {
+        match cvd {
+            ClaimValueData::Item(qid) => ClaimData::Thing(Thing {
+                id: qid.0.into(),
+                tb: "Entity".to_string(),
+            }),
+            ClaimValueData::Property(pid) => ClaimData::Thing(Thing {
+                id: pid.0.into(),
+                tb: "Property".to_string(),
+            }),
+            ClaimValueData::Lexeme(lid) => ClaimData::Thing(Thing {
+                id: lid.0.into(),
+                tb: "Lexeme".to_string(),
+            }),
+            _ => ClaimData::ClaimValueData(cvd),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Claims {
-    pub claims: Vec<(Thing, ClaimValueData)>,
+    pub claims: Vec<Claim>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Claim {
+    pub id: Thing,
+    pub value: ClaimData,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -18,12 +50,12 @@ pub struct EntityMini {
 impl EntityMini {
     pub fn from_entity(entity: Entity) -> (Thing, (Thing, Claims), Self) {
         let thing_claim = Thing {
-            id: get_id(&entity).id,
+            id: get_id_entity(&entity).id,
             tb: "Claims".to_string(),
         };
 
         (
-            get_id(&entity),
+            get_id_entity(&entity),
             (
                 thing_claim.clone(),
                 Self::flatten_claims(entity.claims.clone()),
@@ -41,23 +73,21 @@ impl EntityMini {
             claims: claims
                 .iter()
                 .flat_map(|(pid, claim_value)| {
-                    let mut flattened = vec![(
-                        Thing {
+                    let mut flattened = vec![Claim {
+                        id: Thing {
                             id: pid.0.into(),
                             tb: "Property".to_string(),
                         },
-                        claim_value.data.clone(),
-                    )];
+                        value: ClaimData::from_cvd(claim_value.data.clone()),
+                    }];
 
                     flattened.extend(claim_value.qualifiers.iter().map(
-                        |(qualifier_pid, qualifier_value)| {
-                            (
-                                Thing {
-                                    id: qualifier_pid.0.into(),
-                                    tb: "Property".to_string(),
-                                },
-                                qualifier_value.clone(),
-                            )
+                        |(qualifier_pid, qualifier_value)| Claim {
+                            id: Thing {
+                                id: qualifier_pid.0.into(),
+                                tb: "Property".to_string(),
+                            },
+                            value: ClaimData::from_cvd(qualifier_value.clone()),
                         },
                     ));
                     flattened
@@ -67,7 +97,7 @@ impl EntityMini {
     }
 }
 
-fn get_id(entity: &Entity) -> Thing {
+fn get_id_entity(entity: &Entity) -> Thing {
     let (id, tb) = match entity.id {
         WikiId::EntityId(qid) => (qid.0, "Entity".to_string()),
         WikiId::PropertyId(pid) => (pid.0, "Property".to_string()),
