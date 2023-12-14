@@ -31,6 +31,7 @@ impl ClaimData {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Claims {
+    pub id: Option<Thing>,
     pub claims: Vec<Claim>,
 }
 
@@ -42,25 +43,26 @@ pub struct Claim {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EntityMini {
+    pub id: Option<Thing>,
     pub label: String,
     pub claims: Thing,
     pub description: String,
 }
 
 impl EntityMini {
-    pub fn from_entity(entity: Entity) -> (Thing, (Thing, Claims), Self) {
+    pub fn from_entity(entity: Entity) -> (Claims, Self) {
         let thing_claim = Thing {
             id: get_id_entity(&entity).id,
             tb: "Claims".to_string(),
         };
 
         (
-            get_id_entity(&entity),
-            (
-                thing_claim.clone(),
-                Self::flatten_claims(entity.claims.clone()),
-            ),
+            Claims {
+                id: Some(thing_claim.clone()),
+                ..Self::flatten_claims(entity.claims.clone())
+            },
             Self {
+                id: Some(get_id_entity(&entity)),
                 label: get_name(&entity),
                 claims: thing_claim,
                 description: get_description(&entity).unwrap_or("".to_string()),
@@ -70,6 +72,7 @@ impl EntityMini {
 
     fn flatten_claims(claims: Vec<(Pid, ClaimValue)>) -> Claims {
         Claims {
+            id: None,
             claims: claims
                 .iter()
                 .flat_map(|(pid, claim_value)| {

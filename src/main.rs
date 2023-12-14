@@ -33,13 +33,17 @@ async fn main() -> Result<(), Error> {
         let json: Value = from_str(&line)?;
         let data = Entity::from_json(json).expect("Failed to parse JSON");
 
-        let (id, claims, data) = EntityMini::from_entity(data);
+        let (mut claims, mut data) = EntityMini::from_entity(data);
 
+        let id = data.id.clone().expect("No ID");
+        data.id = None;
         let _: Option<EntityMini> = db.delete(&id).await?;
         let _: Option<EntityMini> = db.create(&id).content(data.clone()).await?;
 
-        let _: Option<Claims> = db.delete(&claims.0).await?;
-        let _: Option<Claims> = db.create(&claims.0).content(claims.1).await?;
+        let id = claims.id.clone().expect("No ID");
+        claims.id = None;
+        let _: Option<Claims> = db.delete(&id).await?;
+        let _: Option<Claims> = db.create(&id).content(claims).await?;
     }
 
     Ok(())
