@@ -1,15 +1,13 @@
-use anyhow::{Error, Result};
+use anyhow::{Error, Ok, Result};
 use dotenv_codegen::dotenv;
 use serde_json::{from_str, Value};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use surrealdb::engine::remote::ws::Ws;
-use surrealdb::opt::auth::Root;
-use surrealdb::Surreal;
+use surrealdb::{engine::remote::ws::Ws, opt::auth::Root, Surreal};
+use wikidata::Entity;
 
 mod utils;
 use utils::*;
-use wikidata::Entity;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -23,7 +21,7 @@ async fn main() -> Result<(), Error> {
 
     db.use_ns("wikidata").use_db("wikidata").await?;
 
-    let file = File::open("data/w.json")?;
+    let file = File::open("data/ex2.json")?;
     let reader = BufReader::new(file);
 
     for line in reader.lines() {
@@ -35,10 +33,13 @@ async fn main() -> Result<(), Error> {
         let json: Value = from_str(&line)?;
         let data = Entity::from_json(json).expect("Failed to parse JSON");
 
-        let (id, data) = EntityMini::from_entity(data);
+        let (id, claims, data) = EntityMini::from_entity(data);
 
         let _: Option<EntityMini> = db.delete(&id).await?;
         let _: Option<EntityMini> = db.create(&id).content(data.clone()).await?;
+
+        let _: Option<Claims> = db.delete(&claims.0).await?;
+        let _: Option<Claims> = db.create(&claims.0).content(claims.1).await?;
     }
 
     Ok(())

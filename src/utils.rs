@@ -1,54 +1,69 @@
+use dotenv_codegen::dotenv;
 use serde::{Deserialize, Serialize};
 use surrealdb::sql::Thing;
-use wikidata::ClaimValueData;
-use wikidata::{ClaimValue, Entity, Lang, Pid, WikiId};
+use wikidata::{ClaimValue, ClaimValueData, Entity, Lang, Pid, WikiId};
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Claims {
+    pub claims: Vec<(Thing, ClaimValueData)>,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EntityMini {
-    // In English
     pub label: String,
-    pub claims: Vec<(Thing, ClaimValueData)>,
+    pub claims: Thing,
     pub description: String,
 }
 
 impl EntityMini {
-    pub fn from_entity(entity: Entity) -> (Thing, Self) {
+    pub fn from_entity(entity: Entity) -> (Thing, (Thing, Claims), Self) {
+        let thing_claim = Thing {
+            id: get_id(&entity).id,
+            tb: "Claims".to_string(),
+        };
+
         (
             get_id(&entity),
+            (
+                thing_claim.clone(),
+                Self::flatten_claims(entity.claims.clone()),
+            ),
             Self {
                 label: get_name(&entity),
-                claims: Self::flatten_claims(entity.claims.clone()),
+                claims: thing_claim,
                 description: get_description(&entity).unwrap_or("".to_string()),
             },
         )
     }
 
-    fn flatten_claims(claims: Vec<(Pid, ClaimValue)>) -> Vec<(Thing, ClaimValueData)> {
-        claims
-            .iter()
-            .flat_map(|(pid, claim_value)| {
-                let mut flattened = vec![(
-                    Thing {
-                        id: pid.0.into(),
-                        tb: "Property".to_string(),
-                    },
-                    claim_value.data.clone(),
-                )];
+    fn flatten_claims(claims: Vec<(Pid, ClaimValue)>) -> Claims {
+        Claims {
+            claims: claims
+                .iter()
+                .flat_map(|(pid, claim_value)| {
+                    let mut flattened = vec![(
+                        Thing {
+                            id: pid.0.into(),
+                            tb: "Property".to_string(),
+                        },
+                        claim_value.data.clone(),
+                    )];
 
-                flattened.extend(claim_value.qualifiers.iter().map(
-                    |(qualifier_pid, qualifier_value)| {
-                        (
-                            Thing {
-                                id: qualifier_pid.0.into(),
-                                tb: "Property".to_string(),
-                            },
-                            qualifier_value.clone(),
-                        )
-                    },
-                ));
-                flattened
-            })
-            .collect()
+                    flattened.extend(claim_value.qualifiers.iter().map(
+                        |(qualifier_pid, qualifier_value)| {
+                            (
+                                Thing {
+                                    id: qualifier_pid.0.into(),
+                                    tb: "Property".to_string(),
+                                },
+                                qualifier_value.clone(),
+                            )
+                        },
+                    ));
+                    flattened
+                })
+                .collect(),
+        }
     }
 }
 
@@ -66,11 +81,14 @@ fn get_id(entity: &Entity) -> Thing {
 fn get_name(entity: &Entity) -> String {
     entity
         .labels
-        .get(&Lang("en".to_string()))
+        .get(&Lang(dotenv!("WIKIDATA_LANG").to_string()))
         .expect("No label found")
         .to_string()
 }
 
 fn get_description(entity: &Entity) -> Option<String> {
-    entity.descriptions.get(&Lang("en".to_string())).cloned()
+    entity
+        .descriptions
+        .get(&Lang(dotenv!("WIKIDATA_LANG").to_string()))
+        .cloned()
 }
