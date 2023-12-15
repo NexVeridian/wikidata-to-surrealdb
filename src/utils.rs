@@ -31,18 +31,21 @@ impl ClaimData {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Claims {
+    // Table: Claims
     pub id: Option<Thing>,
     pub claims: Vec<Claim>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Claim {
+    // Table: Claim
     pub id: Thing,
     pub value: ClaimData,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EntityMini {
+    // Table: Entity, Property, Lexeme
     pub id: Option<Thing>,
     pub label: String,
     pub claims: Thing,

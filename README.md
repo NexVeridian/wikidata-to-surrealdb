@@ -1,8 +1,77 @@
-# Similar Libraries
+A tool for converting Wikidata dumps to a [SurrealDB](https://surrealdb.com/) database. Either From a bz2 or json file format.
+
+# Getting The Data
+https://www.wikidata.org/wiki/Wikidata:Data_access
+
+## From bz2 file (Recommended) ~80GB
+### Dump: [Docs](https://www.wikidata.org/wiki/Wikidata:Database_download)
+### [Download - latest-all.json.bz2](https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.bz2)
+
+## From json file 
+### Linked Data Interface: [Docs](https://www.wikidata.org/wiki/Wikidata:Data_access#Linked_Data_Interface_(URI)) 
+```
+https://www.wikidata.org/wiki/Special:EntityData/Q60746544.json
+https://www.wikidata.org/wiki/Special:EntityData/P527.json
+```
+
+# Example .env
+``` 
+DB_USER=root
+DB_PASSWORD=root
+WIKIDATA_LANG=en
+FILE_FORMAT=bz2
+FILE_NAME=data/latest-all.json.bz2
+```
+
+# How to Query
+## See [Useful queries.md](./Useful%20queries.md)
+
+# Table Layout
+## Thing
+```rust
+pub struct Thing {
+    pub table: String,
+    pub id: Id,
+}
+```
+
+## Table: Entity, Property, Lexeme
+```rust
+pub struct EntityMini {
+    pub id: Option<Thing>,
+    pub label: String,
+    pub claims: Thing,
+    pub description: String,
+}
+```
+
+## Table: Claims
+```rust
+pub struct Claims {
+    pub id: Option<Thing>,
+    pub claims: Vec<Claim>,
+}
+```
+
+## Table: Claim
+```rust
+pub struct Claim {
+    pub id: Thing,
+    pub value: ClaimData,
+}
+```
+
+## ClaimData
+```rust
+pub enum ClaimData {
+    Thing(Thing),
+    ClaimValueData(ClaimValueData),
+}
+```
+
+# Similar Projects
 - [wd2duckdb](https://github.com/weso/wd2duckdb)
 - [wd2sql](https://github.com/p-e-w/wd2sql)
 
 # License
-All code in this repository is dual-licensed under either [License-MIT](./LICENSE-MIT) or [LICENSE-APACHE](./LICENSE-Apache) at your option. This means you can select the license you prefer.
-
-[Why dual license](https://github.com/bevyengine/bevy/issues/2373)
+All code in this repository is dual-licensed under either [License-MIT](./LICENSE-MIT) or [LICENSE-APACHE](./LICENSE-Apache) at your option. This means you can select the license you prefer. [Why dual license](https://github.com/bevyengine/bevy/issues/2373).

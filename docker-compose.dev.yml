@@ -20,7 +20,8 @@ services:
 
     wikidata-to-surrealdb:
         container_name: wikidata-to-surrealdb
-        image: ghcr.io/nexveridian/ark-invest-api-rust-data:latest
+        build:
+            context: .
         restart: unless-stopped
         volumes:
             - ./data:/data
