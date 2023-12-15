@@ -1,6 +1,7 @@
 version: "3"
 services:
     surrealdb:
+        image: surrealdb/surrealdb:latest
         container_name: surrealdb
         env_file:
         - .env
@@ -12,7 +13,6 @@ services:
         - --pass
         - $DB_PASSWORD
         - file:/data/surrealdb
-        image: surrealdb/surrealdb:latest
         ports:
             - 8000:8000
         volumes:

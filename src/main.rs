@@ -1,4 +1,5 @@
 use anyhow::{Error, Ok, Result};
+use bzip2::read::MultiBzDecoder;
 use dotenv_codegen::dotenv;
 use serde_json::{from_str, Value};
 use std::fs::File;
@@ -9,20 +10,39 @@ use wikidata::Entity;
 mod utils;
 use utils::*;
 
+#[allow(non_camel_case_types)]
+enum File_Format {
+    json,
+    bz2,
+}
+impl File_Format {
+    fn new(file: &str) -> Self {
+        match file {
+            "json" => Self::json,
+            "bz2" => Self::bz2,
+            _ => panic!("Unknown file format"),
+        }
+    }
+    fn reader(self, file: &str) -> Result<Box<dyn BufRead>, Error> {
+        let file = File::open(file)?;
+        match self {
+            File_Format::json => Ok(Box::new(BufReader::new(file))),
+            File_Format::bz2 => Ok(Box::new(BufReader::new(MultiBzDecoder::new(file)))),
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let db = Surreal::new::<Ws>("0.0.0.0:8000").await?;
-
     db.signin(Root {
         username: dotenv!("DB_USER"),
         password: dotenv!("DB_PASSWORD"),
     })
     .await?;
-
     db.use_ns("wikidata").use_db("wikidata").await?;
 
-    let file = File::open("data/e.json")?;
-    let reader = BufReader::new(file);
+    let reader = File_Format::new(dotenv!("FILE_FORMAT")).reader(dotenv!("FILE_NAME"))?;
 
     for line in reader.lines() {
         let line = line?.trim().trim_end_matches(',').to_string();
