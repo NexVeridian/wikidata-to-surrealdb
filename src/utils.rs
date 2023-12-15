@@ -1,7 +1,14 @@
-use dotenv_codegen::dotenv;
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
+use std::env;
 use surrealdb::sql::Thing;
 use wikidata::{ClaimValue, ClaimValueData, Entity, Lang, Pid, WikiId};
+
+lazy_static! {
+    static ref WIKIDATA_LANG: String = env::var("WIKIDATA_LANG")
+        .expect("WIKIDATA_LANG not set")
+        .to_string();
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ClaimData {
@@ -117,7 +124,7 @@ fn get_id_entity(entity: &Entity) -> Thing {
 fn get_name(entity: &Entity) -> String {
     entity
         .labels
-        .get(&Lang(dotenv!("WIKIDATA_LANG").to_string()))
+        .get(&Lang(WIKIDATA_LANG.to_string()))
         .expect("No label found")
         .to_string()
 }
@@ -125,6 +132,6 @@ fn get_name(entity: &Entity) -> String {
 fn get_description(entity: &Entity) -> Option<String> {
     entity
         .descriptions
-        .get(&Lang(dotenv!("WIKIDATA_LANG").to_string()))
+        .get(&Lang(WIKIDATA_LANG.to_string()))
         .cloned()
 }

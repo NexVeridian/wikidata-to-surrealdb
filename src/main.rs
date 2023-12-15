@@ -1,14 +1,25 @@
 use anyhow::{Error, Ok, Result};
 use bzip2::read::MultiBzDecoder;
-use dotenv_codegen::dotenv;
+use lazy_static::lazy_static;
 use serde_json::{from_str, Value};
-use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::{
+    env,
+    fs::File,
+    io::{BufRead, BufReader},
+};
 use surrealdb::{engine::remote::ws::Ws, opt::auth::Root, Surreal};
 use wikidata::Entity;
 
 mod utils;
 use utils::*;
+
+lazy_static! {
+    #[derive(Debug)]
+    static ref DB_USER: String = env::var("DB_USER").expect("DB_USER not set");
+    static ref DB_PASSWORD: String = env::var("DB_PASSWORD").expect("DB_PASSWORD not set");
+    static ref FILE_FORMAT: String = env::var("FILE_FORMAT").expect("FILE_FORMAT not set");
+    static ref FILE_NAME: String = env::var("FILE_NAME").expect("FILE_NAME not set");
+}
 
 #[allow(non_camel_case_types)]
 enum File_Format {
@@ -36,13 +47,13 @@ impl File_Format {
 async fn main() -> Result<(), Error> {
     let db = Surreal::new::<Ws>("0.0.0.0:8000").await?;
     db.signin(Root {
-        username: dotenv!("DB_USER"),
-        password: dotenv!("DB_PASSWORD"),
+        username: &DB_USER,
+        password: &DB_PASSWORD,
     })
     .await?;
     db.use_ns("wikidata").use_db("wikidata").await?;
 
-    let reader = File_Format::new(dotenv!("FILE_FORMAT")).reader(dotenv!("FILE_NAME"))?;
+    let reader = File_Format::new(&FILE_FORMAT).reader(&FILE_NAME)?;
 
     for line in reader.lines() {
         let line = line?.trim().trim_end_matches(',').to_string();
