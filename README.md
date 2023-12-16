@@ -39,6 +39,7 @@ FILE_FORMAT=bz2
 FILE_NAME=data/latest-all.json.bz2
 # If not using docker file for Wikidata to SurrealDB, use 0.0.0.0:8000
 WIKIDATA_DB_PORT=surrealdb:8000
+THREADED_REQUESTS=true
 ```
 
 ## View Progress

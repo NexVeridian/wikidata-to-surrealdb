@@ -1,5 +1,6 @@
 use anyhow::{Error, Ok, Result};
 use bzip2::read::MultiBzDecoder;
+use futures::future::join_all;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use lazy_static::lazy_static;
 use serde_json::{from_str, Value};
@@ -11,7 +12,11 @@ use std::{
     thread,
     time::Duration,
 };
-use surrealdb::{engine::remote::ws::Ws, opt::auth::Root, Surreal};
+use surrealdb::{
+    engine::remote::ws::{Client, Ws},
+    opt::auth::Root,
+    Surreal,
+};
 use wikidata::Entity;
 
 mod utils;
@@ -24,6 +29,7 @@ lazy_static! {
     static ref WIKIDATA_FILE_FORMAT: String = env::var("WIKIDATA_FILE_FORMAT").expect("FILE_FORMAT not set");
     static ref WIKIDATA_FILE_NAME: String = env::var("WIKIDATA_FILE_NAME").expect("FILE_NAME not set");
     static ref WIKIDATA_DB_PORT: String = env::var("WIKIDATA_DB_PORT").expect("WIKIDATA_DB_PORT not set");
+    static ref THREADED_REQUESTS: bool = env::var("THREADED_REQUESTS").expect("THREADED_REQUESTS not set").parse().expect("Failed to parse THREADED_REQUESTS");
 }
 
 #[allow(non_camel_case_types)]
@@ -48,17 +54,45 @@ impl File_Format {
     }
 }
 
+async fn create_db_entity(db: &Surreal<Client>, line: String) -> Result<(), Error> {
+    let line = line.trim().trim_end_matches(',').to_string();
+    if line == "[" || line == "]" {
+        return Ok(());
+    }
+
+    let json: Value = from_str(&line)?;
+    let data = Entity::from_json(json).expect("Failed to parse JSON");
+
+    let (mut claims, mut data) = EntityMini::from_entity(data);
+
+    let id = data.id.clone().expect("No ID");
+    data.id = None;
+    let _: Option<EntityMini> = db.delete(&id).await?;
+    let _: Option<EntityMini> = db.create(&id).content(data.clone()).await?;
+
+    let id = claims.id.clone().expect("No ID");
+    claims.id = None;
+    let _: Option<Claims> = db.delete(&id).await?;
+    let _: Option<Claims> = db.create(&id).content(claims).await?;
+    Ok(())
+}
+
+async fn create_db_entities(db: &Surreal<Client>, lines: Vec<String>) -> Result<(), Error> {
+    for line in lines {
+        create_db_entity(db, line.to_string()).await?;
+    }
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     thread::sleep(Duration::from_secs(10));
-
-    let mut compleated = 0;
     let total_size = 113_000_000;
 
     let pb = ProgressBar::new(total_size);
     pb.set_style(
         ProgressStyle::with_template(
-            "[{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} {percent} ETA:{eta}",
+            "[{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} ETA:[{eta}]",
         )?
         .with_key("eta", |state: &ProgressState, w: &mut dyn Write| {
             let sec = state.eta().as_secs();
@@ -79,31 +113,43 @@ async fn main() -> Result<(), Error> {
 
     let reader = File_Format::new(&WIKIDATA_FILE_FORMAT).reader(&WIKIDATA_FILE_NAME)?;
 
-    for line in reader.lines() {
-        let line = line?.trim().trim_end_matches(',').to_string();
-        if line == "[" || line == "]" {
-            continue;
+    if !*THREADED_REQUESTS {
+        let counter = 0;
+        for line in reader.lines() {
+            create_db_entity(&db, line?).await?;
+            if counter % 100 == 0 {
+                pb.inc(100);
+            }
+        }
+    } else {
+        let mut futures = Vec::new();
+        let mut chunk = Vec::new();
+        let mut chunk_counter: i32 = 0;
+        const BATCH_AMMOUNT: u16 = 50;
+
+        for line in reader.lines() {
+            chunk.push(line.unwrap());
+
+            if chunk.len() >= BATCH_AMMOUNT.try_into().unwrap() {
+                let db = db.clone();
+                let lines = chunk.clone();
+                let pb = pb.clone();
+
+                futures.push(tokio::spawn(async move {
+                    create_db_entities(&db, lines).await.unwrap();
+                    pb.inc(BATCH_AMMOUNT.try_into().unwrap());
+                }));
+                chunk_counter += 1;
+                chunk.clear();
+            }
+
+            if chunk_counter >= 50 {
+                join_all(futures).await;
+                futures = Vec::new();
+            }
         }
 
-        let json: Value = from_str(&line)?;
-        let data = Entity::from_json(json).expect("Failed to parse JSON");
-
-        let (mut claims, mut data) = EntityMini::from_entity(data);
-
-        let id = data.id.clone().expect("No ID");
-        data.id = None;
-        let _: Option<EntityMini> = db.delete(&id).await?;
-        let _: Option<EntityMini> = db.create(&id).content(data.clone()).await?;
-
-        let id = claims.id.clone().expect("No ID");
-        claims.id = None;
-        let _: Option<Claims> = db.delete(&id).await?;
-        let _: Option<Claims> = db.create(&id).content(claims).await?;
-
-        compleated += 1;
-        if compleated % 1000 == 0 {
-            pb.set_position(compleated);
-        }
+        join_all(futures).await;
     }
 
     pb.finish_with_message("Done parsing Wikidata");
