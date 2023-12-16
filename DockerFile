@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/usr/local/cargo,from=rust,source=/usr/local/cargo
 
 FROM alpine:latest AS main
 
-WORKDIR /wikidata-to-surrealdb
+# WORKDIR /wikidata-to-surrealdb
 
 COPY --from=builder wikidata-to-surrealdb/wikidata-to-surrealdb .
 

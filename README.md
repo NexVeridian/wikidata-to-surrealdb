@@ -1,27 +1,50 @@
+# Wikidata to SurrealDB
 A tool for converting Wikidata dumps to a [SurrealDB](https://surrealdb.com/) database. Either From a bz2 or json file format.
 
 # Getting The Data
 https://www.wikidata.org/wiki/Wikidata:Data_access
 
-## From bz2 file (Recommended) ~80GB
+## From bz2 file ~80GB
 ### Dump: [Docs](https://www.wikidata.org/wiki/Wikidata:Database_download)
 ### [Download - latest-all.json.bz2](https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.bz2)
 
-## From json file 
+## From json file
 ### Linked Data Interface: [Docs](https://www.wikidata.org/wiki/Wikidata:Data_access#Linked_Data_Interface_(URI)) 
 ```
 https://www.wikidata.org/wiki/Special:EntityData/Q60746544.json
 https://www.wikidata.org/wiki/Special:EntityData/P527.json
 ```
 
-# Example .env
+# Install
+Copy docker-compose.yml
+
+Create data folder next to docker-compose.yml and .env, place data inside, and set the data type in .env   
+```
+├── data
+│   ├── Entity.json
+│   ├── latest-all.json.bz2
+│   └── surrealdb
+├── docker-compose.yml
+└── .env
+```
+
+`docker compose up --pull always`
+
+## Example .env
 ``` 
 DB_USER=root
 DB_PASSWORD=root
 WIKIDATA_LANG=en
 FILE_FORMAT=bz2
 FILE_NAME=data/latest-all.json.bz2
+# If not using docker file for Wikidata to SurrealDB, use 0.0.0.0:8000
+WIKIDATA_DB_PORT=surrealdb:8000
 ```
+
+## View Progress
+`docker attach wikidata-to-surrealdb`
+
+# [Dev Install](./CONTRIBUTING.md#dev-install)
 
 # How to Query
 ## See [Useful queries.md](./Useful%20queries.md)

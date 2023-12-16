@@ -13,3 +13,4 @@ tokio = "1.35"
 wikidata = "0.3.1"
 bzip2 = { version = "0.4", features = ["tokio"] }
 lazy_static = "1.4"
+indicatif = "0.17"

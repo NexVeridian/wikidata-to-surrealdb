@@ -125,8 +125,8 @@ fn get_name(entity: &Entity) -> String {
     entity
         .labels
         .get(&Lang(WIKIDATA_LANG.to_string()))
-        .expect("No label found")
-        .to_string()
+        .map(|label| label.to_string())
+        .unwrap_or_default()
 }
 
 fn get_description(entity: &Entity) -> Option<String> {

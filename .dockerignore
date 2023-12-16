@@ -4,8 +4,10 @@
 /data
 /target
 .dockerignore
+.env
+.gitignore
 Cargo.lock
-Dockerfile
-docker-compose.yml
 docker-compose.dev.yml
+docker-compose.yml
+dockerfile
 *.md

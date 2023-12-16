@@ -25,13 +25,8 @@ services:
         image: ghcr.io/nexveridian/ark-invest-api-rust-data:latest
         env_file:
             - .env
-        environment:
-            - DB_USER=$DB_USER
-            - DB_PASSWORD=$DB_PASSWORD
-            - WIKIDATA_LANG=$WIKIDATA_LANG
-            - FILE_FORMAT=$FILE_FORMAT
-            - FILE_NAME=$FILE_NAME
         restart: no
+        tty: true
         depends_on:
             - surrealdb
         volumes:
