@@ -75,7 +75,7 @@ impl EntityMini {
                 id: Some(get_id_entity(&entity)),
                 label: get_name(&entity),
                 claims: thing_claim,
-                description: get_description(&entity).unwrap_or("".to_string()),
+                description: get_description(&entity),
             },
         )
     }
@@ -129,9 +129,10 @@ fn get_name(entity: &Entity) -> String {
         .unwrap_or_default()
 }
 
-fn get_description(entity: &Entity) -> Option<String> {
+fn get_description(entity: &Entity) -> String {
     entity
         .descriptions
         .get(&Lang(WIKIDATA_LANG.to_string()))
         .cloned()
+        .unwrap_or_default()
 }

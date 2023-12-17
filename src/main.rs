@@ -67,19 +67,32 @@ async fn create_db_entity(db: &Surreal<Client>, line: String) -> Result<(), Erro
 
     let id = data.id.clone().expect("No ID");
     data.id = None;
-    let _: Option<EntityMini> = db.delete(&id).await?;
-    let _: Option<EntityMini> = db.create(&id).content(data.clone()).await?;
+    let _ = db.create::<Option<EntityMini>>(&id).await.is_err();
+    {
+        db.update::<Option<EntityMini>>(&id).content(data).await?;
+    };
 
     let id = claims.id.clone().expect("No ID");
     claims.id = None;
-    let _: Option<Claims> = db.delete(&id).await?;
-    let _: Option<Claims> = db.create(&id).content(claims).await?;
+    let _ = db.create::<Option<Claims>>(&id).await.is_err();
+    {
+        db.update::<Option<Claims>>(&id).content(claims).await?;
+    }
     Ok(())
 }
 
-async fn create_db_entities(db: &Surreal<Client>, lines: Vec<String>) -> Result<(), Error> {
+async fn create_db_entities(
+    db: &Surreal<Client>,
+    lines: Vec<String>,
+    pb: ProgressBar,
+) -> Result<(), Error> {
+    let mut counter = 0;
     for line in lines {
         create_db_entity(db, line.to_string()).await?;
+        counter += 1;
+        if counter % 100 == 0 {
+            pb.inc(100);
+        }
     }
     Ok(())
 }
@@ -114,9 +127,10 @@ async fn main() -> Result<(), Error> {
     let reader = File_Format::new(&WIKIDATA_FILE_FORMAT).reader(&WIKIDATA_FILE_NAME)?;
 
     if !*THREADED_REQUESTS {
-        let counter = 0;
+        let mut counter = 0;
         for line in reader.lines() {
             create_db_entity(&db, line?).await?;
+            counter += 1;
             if counter % 100 == 0 {
                 pb.inc(100);
             }
@@ -124,34 +138,35 @@ async fn main() -> Result<(), Error> {
     } else {
         let mut futures = Vec::new();
         let mut chunk = Vec::new();
-        let mut chunk_counter: i32 = 0;
-        const BATCH_AMMOUNT: u16 = 50;
+        let mut chunk_counter = 0;
+        const BATCH_SIZE: usize = 1000;
+        const BATCH_NUM: usize = 100;
 
         for line in reader.lines() {
             chunk.push(line.unwrap());
 
-            if chunk.len() >= BATCH_AMMOUNT.try_into().unwrap() {
+            if chunk.len() >= BATCH_SIZE {
                 let db = db.clone();
                 let lines = chunk.clone();
                 let pb = pb.clone();
 
                 futures.push(tokio::spawn(async move {
-                    create_db_entities(&db, lines).await.unwrap();
-                    pb.inc(BATCH_AMMOUNT.try_into().unwrap());
+                    create_db_entities(&db, lines, pb).await.unwrap();
                 }));
                 chunk_counter += 1;
                 chunk.clear();
             }
 
-            if chunk_counter >= 50 {
+            if chunk_counter >= BATCH_NUM {
                 join_all(futures).await;
                 futures = Vec::new();
+                chunk_counter = 0;
             }
         }
 
         join_all(futures).await;
     }
 
-    pb.finish_with_message("Done parsing Wikidata");
+    pb.finish();
     Ok(())
 }
