@@ -13,6 +13,13 @@ services:
         - --pass
         - $DB_PASSWORD
         - file:/data/surrealdb
+        restart: always
+        deploy:
+            resources:
+                limits:
+                    memory: 8GB
+                reservations:
+                    cpus: '0.5'
         ports:
             - 8000:8000
         volumes:

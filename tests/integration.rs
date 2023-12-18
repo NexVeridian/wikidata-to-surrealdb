@@ -9,6 +9,7 @@ use wikidata_to_surrealdb::utils::*;
 
 async fn inti_db() -> Result<Surreal<Db>, Error> {
     env::set_var("WIKIDATA_LANG", "en");
+    env::set_var("OVERWRITE_DB", "true");
 
     let db = Surreal::new::<Mem>(()).await?;
     db.use_ns("wikidata").use_db("wikidata").await?;
@@ -40,7 +41,7 @@ async fn entity() {
         .unwrap();
 
     for line in reader.lines() {
-        create_db_entity(&db, line.unwrap()).await.unwrap();
+        create_db_entity(&db, &line.unwrap()).await.unwrap();
     }
 
     assert_eq!(51.0, entity_query(&db).await.unwrap().unwrap())
@@ -82,7 +83,7 @@ async fn property() {
         .unwrap();
 
     for line in reader.lines() {
-        create_db_entity(&db, line.unwrap()).await.unwrap();
+        create_db_entity(&db, &line.unwrap()).await.unwrap();
     }
 
     assert_eq!(2.0, property_query(&db).await.unwrap().unwrap())

@@ -16,7 +16,7 @@ https://www.wikidata.org/wiki/Special:EntityData/P527.json
 ```
 
 # Install
-Copy docker-compose.yml
+Copy [docker-compose.yml](./docker-compose.yml)
 
 Create data folder next to docker-compose.yml and .env, place data inside, and set the data type in .env   
 ```
@@ -40,6 +40,8 @@ FILE_NAME=data/latest-all.json.bz2
 # If not using docker file for Wikidata to SurrealDB, use 0.0.0.0:8000
 WIKIDATA_DB_PORT=surrealdb:8000
 THREADED_REQUESTS=true
+# true=overwrite existing data, false=skip if already exists
+OVERWRITE_DB=false
 ```
 
 ## View Progress

@@ -1,8 +1,9 @@
 use anyhow::{Error, Ok, Result};
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use lazy_static::lazy_static;
-use std::{env, fmt::Write, io::BufRead, thread, time::Duration};
+use std::{env, fmt::Write, io::BufRead};
 use surrealdb::{engine::remote::ws::Ws, opt::auth::Root, Surreal};
+use tokio::time::{sleep, Duration};
 mod utils;
 use utils::*;
 
@@ -18,7 +19,7 @@ lazy_static! {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    thread::sleep(Duration::from_secs(10));
+    sleep(Duration::from_secs(10)).await;
     let total_size = 113_000_000;
 
     let pb = ProgressBar::new(total_size);
@@ -48,14 +49,30 @@ async fn main() -> Result<(), Error> {
     if !*THREADED_REQUESTS {
         let mut counter = 0;
         for line in reader.lines() {
-            create_db_entity(&db, line?).await?;
+            let mut retries = 0;
+            let line = line?;
+
+            loop {
+                if create_db_entity(&db, &line).await.is_ok() {
+                    break;
+                }
+                if retries >= 60 * 10 {
+                    panic!("Failed to create entities, too many retries");
+                }
+                retries += 1;
+                sleep(Duration::from_secs(1)).await;
+                if db.use_ns("wikidata").use_db("wikidata").await.is_err() {
+                    continue;
+                };
+            }
+
             counter += 1;
             if counter % 100 == 0 {
                 pb.inc(100);
             }
         }
     } else {
-        create_db_entities_threaded(&db, reader, Some(pb.clone()), 1000, 100).await?;
+        create_db_entities_threaded(&db, reader, Some(pb.clone()), 2500, 100).await?;
     }
 
     pb.finish();
