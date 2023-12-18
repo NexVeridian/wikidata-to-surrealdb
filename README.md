@@ -1,5 +1,5 @@
 # Wikidata to SurrealDB
-A tool for converting Wikidata dumps to a [SurrealDB](https://surrealdb.com/) database. Either From a bz2 or json file format.
+A tool for converting Wikidata dumps to a [SurrealDB](https://surrealdb.com/) database. Either From a bz2 or json file.
 
 # Getting The Data
 https://www.wikidata.org/wiki/Wikidata:Data_access
@@ -50,20 +50,21 @@ THREADED_REQUESTS=true
 # How to Query
 ## See [Useful queries.md](./Useful%20queries.md)
 
-# Table Layout
-## Thing
+# Table Schema
+## SurrealDB Thing
 ```rust
 pub struct Thing {
     pub table: String,
-    pub id: Id,
+    pub id: Id, // i64
 }
 ```
 
-## Table: Entity, Property, Lexeme
+## Tables: Entity, Property, Lexeme
 ```rust
 pub struct EntityMini {
     pub id: Option<Thing>,
     pub label: String,
+     // Claims Table
     pub claims: Thing,
     pub description: String,
 }
@@ -71,27 +72,21 @@ pub struct EntityMini {
 
 ## Table: Claims
 ```rust
-pub struct Claims {
-    pub id: Option<Thing>,
-    pub claims: Vec<Claim>,
-}
-```
-
-## Table: Claim
-```rust
 pub struct Claim {
     pub id: Thing,
     pub value: ClaimData,
 }
 ```
 
-## ClaimData
+### ClaimData
 ```rust
 pub enum ClaimData {
-    Thing(Thing),
+    // Entity, Property, Lexeme Tables
+    Thing(Thing), 
     ClaimValueData(ClaimValueData),
 }
 ```
+#### [Docs for ClaimValueData](https://docs.rs/wikidata/0.3.1/wikidata/enum.ClaimValueData.html)
 
 # Similar Projects
 - [wd2duckdb](https://github.com/weso/wd2duckdb)

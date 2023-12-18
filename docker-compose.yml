@@ -22,7 +22,7 @@ services:
 
     wikidata-to-surrealdb:
         container_name: wikidata-to-surrealdb
-        image: ghcr.io/nexveridian/ark-invest-api-rust-data:latest
+        image: ghcr.io/nexveridian/wikidata-to-surrealdb:latest
         env_file:
             - .env
         restart: no
