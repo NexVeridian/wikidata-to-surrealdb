@@ -54,7 +54,7 @@ async fn entity_threaded() {
         .reader("tests/data/Entity.json")
         .unwrap();
 
-    create_db_entities_threaded(&db, reader, None, 1000, 100)
+    create_db_entities_threaded(Some(db.clone()), reader, None, 1000, 100)
         .await
         .unwrap();
 
@@ -96,7 +96,7 @@ async fn property_threaded() {
         .reader("tests/data/Property.json")
         .unwrap();
 
-    create_db_entities_threaded(&db, reader, None, 1000, 100)
+    create_db_entities_threaded(Some(db.clone()), reader, None, 1000, 100)
         .await
         .unwrap();
 

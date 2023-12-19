@@ -16,8 +16,6 @@ services:
         restart: always
         deploy:
             resources:
-                limits:
-                    memory: 8GB
                 reservations:
                     cpus: '0.5'
         ports:

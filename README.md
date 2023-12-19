@@ -28,7 +28,10 @@ Create data folder next to docker-compose.yml and .env, place data inside, and s
 └── .env
 ```
 
-`docker compose up --pull always`
+`docker compose up --pull always -d`
+
+## View Progress
+`docker attach wikidata-to-surrealdb`
 
 ## Example .env
 ``` 
@@ -43,9 +46,6 @@ THREADED_REQUESTS=true
 # true=overwrite existing data, false=skip if already exists
 OVERWRITE_DB=false
 ```
-
-## View Progress
-`docker attach wikidata-to-surrealdb`
 
 # [Dev Install](./CONTRIBUTING.md#dev-install)
 

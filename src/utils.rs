@@ -1,4 +1,4 @@
-use anyhow::{Error, Ok, Result};
+use anyhow::{Error, Result};
 use bzip2::read::MultiBzDecoder;
 use futures::future::join_all;
 use indicatif::ProgressBar;
@@ -9,7 +9,11 @@ use std::{
     fs::File,
     io::{BufRead, BufReader},
 };
-use surrealdb::{Connection, Surreal};
+use surrealdb::{
+    engine::remote::ws::{Client, Ws},
+    opt::auth::Root,
+    Connection, Surreal,
+};
 use tokio::time::{sleep, Duration};
 use wikidata::Entity;
 
@@ -21,6 +25,10 @@ lazy_static! {
         .expect("OVERWRITE_DB not set")
         .parse()
         .expect("Failed to parse OVERWRITE_DB");
+    static ref DB_USER: String = env::var("DB_USER").expect("DB_USER not set");
+    static ref DB_PASSWORD: String = env::var("DB_PASSWORD").expect("DB_PASSWORD not set");
+    static ref WIKIDATA_DB_PORT: String =
+        env::var("WIKIDATA_DB_PORT").expect("WIKIDATA_DB_PORT not set");
 }
 
 #[allow(non_camel_case_types)]
@@ -45,7 +53,7 @@ impl File_Format {
     }
 }
 
-pub async fn create_db_entity<C: Connection>(db: &Surreal<C>, line: &str) -> Result<(), Error> {
+pub async fn create_db_entity(db: &Surreal<impl Connection>, line: &str) -> Result<(), Error> {
     let line = line.trim().trim_end_matches(',').to_string();
     if line == "[" || line == "]" {
         return Ok(());
@@ -70,8 +78,8 @@ pub async fn create_db_entity<C: Connection>(db: &Surreal<C>, line: &str) -> Res
     Ok(())
 }
 
-pub async fn create_db_entities<C: Connection>(
-    db: &Surreal<C>,
+pub async fn create_db_entities(
+    db: &Surreal<impl Connection>,
     lines: &Vec<String>,
     pb: &Option<ProgressBar>,
 ) -> Result<(), Error> {
@@ -88,8 +96,8 @@ pub async fn create_db_entities<C: Connection>(
     Ok(())
 }
 
-pub async fn create_db_entities_threaded<C: Connection>(
-    db: &Surreal<C>,
+pub async fn create_db_entities_threaded(
+    dbo: Option<Surreal<impl Connection>>, // None::<Surreal<Client>>
     reader: Box<dyn BufRead>,
     pb: Option<ProgressBar>,
     batch_size: usize,
@@ -103,28 +111,42 @@ pub async fn create_db_entities_threaded<C: Connection>(
         chunk.push(line?);
 
         if chunk.len() >= batch_size {
-            let db = db.clone();
-            let lines = chunk.clone();
+            let dbo = dbo.clone();
             let pb = pb.clone();
 
             futures.push(tokio::spawn(async move {
                 let mut retries = 0;
                 loop {
-                    if create_db_entities(&db, &lines, &pb).await.is_ok() {
-                        break;
+                    match dbo {
+                        Some(ref db) => {
+                            if create_db_entities(db, &chunk, &pb).await.is_ok() {
+                                break;
+                            }
+                            if db.use_ns("wikidata").use_db("wikidata").await.is_err() {
+                                continue;
+                            };
+                        }
+                        None => {
+                            let db = if let Ok(db) = create_db_ws().await {
+                                db
+                            } else {
+                                continue;
+                            };
+                            if create_db_entities(&db, &chunk, &pb).await.is_ok() {
+                                break;
+                            }
+                        }
                     }
+
                     if retries >= 60 * 10 {
                         panic!("Failed to create entities, too many retries");
                     }
                     retries += 1;
                     sleep(Duration::from_secs(1)).await;
-                    if db.use_ns("wikidata").use_db("wikidata").await.is_err() {
-                        continue;
-                    };
                 }
             }));
             chunk_counter += 1;
-            chunk.clear();
+            chunk = Vec::new();
         }
 
         if chunk_counter >= batch_num {
@@ -134,7 +156,27 @@ pub async fn create_db_entities_threaded<C: Connection>(
         }
     }
 
-    create_db_entities(db, &chunk, &pb).await?;
+    match dbo {
+        Some(db) => {
+            create_db_entities(&db, &chunk, &pb).await?;
+        }
+        None => {
+            create_db_entities(&create_db_ws().await?, &chunk, &pb).await?;
+        }
+    }
     join_all(futures).await;
     Ok(())
+}
+
+pub async fn create_db_ws() -> Result<Surreal<Client>, Error> {
+    let db = Surreal::new::<Ws>(WIKIDATA_DB_PORT.as_str()).await?;
+
+    db.signin(Root {
+        username: &DB_USER,
+        password: &DB_PASSWORD,
+    })
+    .await?;
+    db.use_ns("wikidata").use_db("wikidata").await?;
+
+    Ok(db)
 }
