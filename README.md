@@ -1,5 +1,9 @@
 # Wikidata to SurrealDB
-A tool for converting Wikidata dumps to a [SurrealDB](https://surrealdb.com/) database. Either From a bz2 or json file.
+A tool for converting Wikidata dumps to a [SurrealDB](https://surrealdb.com/) database. Either From a bz2 or json file. 
+
+The surrealdb database is ~2.6GB uncompressed or 0.5GB compressed, while the bz2 file is ~80GB, gzip file is ~130GB, and the uncompressed json file is over 1TB.
+
+Querying the entire database takes ~2 seconds per query. Building the database on a 7600k takes ~55 hours, using a cpu with more cores should be faster.
 
 # Getting The Data
 https://www.wikidata.org/wiki/Wikidata:Data_access
@@ -43,8 +47,10 @@ FILE_NAME=data/latest-all.json.bz2
 # If not using docker file for Wikidata to SurrealDB, use 0.0.0.0:8000
 WIKIDATA_DB_PORT=surrealdb:8000
 THREADED_REQUESTS=true
+WIKIDATA_BULK_INSERT=true
 # true=overwrite existing data, false=skip if already exists
 OVERWRITE_DB=false
+INDIVIDUAL_WS=true
 ```
 
 # [Dev Install](./CONTRIBUTING.md#dev-install)

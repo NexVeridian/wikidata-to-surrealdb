@@ -47,27 +47,29 @@ async fn entity() {
     assert_eq!(51.0, entity_query(&db).await.unwrap().unwrap())
 }
 
+async fn entity_threaded_insert(create_version: CreateVersion) -> Result<Surreal<Db>, Error> {
+    let db = inti_db().await?;
+    let reader = File_Format::new("json").reader("tests/data/Entity.json")?;
+
+    create_db_entities_threaded(Some(db.clone()), reader, None, 1000, 100, create_version).await?;
+    Ok(db)
+}
+
 #[tokio::test]
 async fn entity_threaded() {
-    let db = inti_db().await.unwrap();
-    let reader = File_Format::new("json")
-        .reader("tests/data/Entity.json")
-        .unwrap();
+    let db = entity_threaded_insert(CreateVersion::Single).await.unwrap();
+    assert_eq!(51.0, entity_query(&db).await.unwrap().unwrap())
+}
 
-    create_db_entities_threaded(Some(db.clone()), reader, None, 1000, 100)
-        .await
-        .unwrap();
-
+#[tokio::test]
+async fn entity_threaded_bulk_insert() {
+    let db = entity_threaded_insert(CreateVersion::Bulk).await.unwrap();
     assert_eq!(51.0, entity_query(&db).await.unwrap().unwrap())
 }
 
 async fn property_query(db: &Surreal<Db>) -> Result<Option<f32>, Error> {
     let x: Option<f32> = db
-        .query(
-            r#"
-		return count(select * from Property);
-		"#,
-        )
+        .query("return count(select * from Property);")
         .await
         .unwrap()
         .take(0)
@@ -89,16 +91,24 @@ async fn property() {
     assert_eq!(2.0, property_query(&db).await.unwrap().unwrap())
 }
 
-#[tokio::test]
-async fn property_threaded() {
-    let db = inti_db().await.unwrap();
-    let reader = File_Format::new("json")
-        .reader("tests/data/Property.json")
-        .unwrap();
+async fn property_threaded_insert(create_version: CreateVersion) -> Result<Surreal<Db>, Error> {
+    let db = inti_db().await?;
+    let reader = File_Format::new("json").reader("tests/data/Property.json")?;
 
-    create_db_entities_threaded(Some(db.clone()), reader, None, 1000, 100)
+    create_db_entities_threaded(Some(db.clone()), reader, None, 1000, 100, create_version).await?;
+    Ok(db)
+}
+
+#[tokio::test]
+async fn property_threaded_single_insert() {
+    let db = property_threaded_insert(CreateVersion::Single)
         .await
         .unwrap();
+    assert_eq!(2.0, property_query(&db).await.unwrap().unwrap())
+}
 
+#[tokio::test]
+async fn property_threaded_bulk_insert() {
+    let db = property_threaded_insert(CreateVersion::Bulk).await.unwrap();
     assert_eq!(2.0, property_query(&db).await.unwrap().unwrap())
 }

@@ -1,7 +1,7 @@
 use anyhow::{Error, Result};
 use bzip2::read::MultiBzDecoder;
 use futures::future::join_all;
-use indicatif::ProgressBar;
+use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use lazy_static::lazy_static;
 use serde_json::{from_str, Value};
 use std::{
@@ -96,21 +96,95 @@ pub async fn create_db_entities(
     Ok(())
 }
 
+pub async fn create_db_entities_bulk(
+    db: &Surreal<impl Connection>,
+    lines: &[String],
+    pb: &Option<ProgressBar>,
+) -> Result<(), Error> {
+    let lines = lines
+        .iter()
+        .map(|line| line.trim().trim_end_matches(',').to_string())
+        .filter(|line| line != "[" && line != "]")
+        .collect::<Vec<String>>();
+
+    let mut data_vec: Vec<EntityMini> = Vec::new();
+    let mut claims_vec: Vec<Claims> = Vec::new();
+    let mut property_vec: Vec<EntityMini> = Vec::new();
+    let mut lexeme_vec: Vec<EntityMini> = Vec::new();
+
+    for line in lines {
+        let json: Value = from_str(&line).expect("Failed to parse JSON");
+        let data = Entity::from_json(json).expect("Failed to parse JSON");
+        let (claims, data) = EntityMini::from_entity(data);
+        match data.id.clone().expect("No ID").tb.as_str() {
+            "Property" => property_vec.push(data),
+            "Lexeme" => lexeme_vec.push(data),
+            "Entity" => data_vec.push(data),
+            _ => panic!("Unknown table"),
+        }
+        claims_vec.push(claims);
+    }
+
+    db.query("insert into Entity ($data_vec) RETURN NONE;")
+        .bind(("data_vec", data_vec))
+        .await?;
+    db.query("insert into Claims ($claims_vec) RETURN NONE;")
+        .bind(("claims_vec", claims_vec))
+        .await?;
+    db.query("insert into Property ($property_vec) RETURN NONE;")
+        .bind(("property_vec", property_vec))
+        .await?;
+    db.query("insert into Lexeme ($lexeme_vec) RETURN NONE;")
+        .bind(("lexeme_vec", lexeme_vec))
+        .await?;
+
+    if let Some(ref p) = pb {
+        p.inc(100)
+    }
+    Ok(())
+}
+
+#[derive(Clone, Copy)]
+pub enum CreateVersion {
+    Single,
+    Bulk,
+}
+impl CreateVersion {
+    pub async fn run(
+        self,
+        db: &Surreal<impl Connection>,
+        chunk: &Vec<String>,
+        pb: &Option<ProgressBar>,
+    ) -> bool {
+        match self {
+            CreateVersion::Single => create_db_entities(db, chunk, pb).await.is_ok(),
+            CreateVersion::Bulk => create_db_entities_bulk(db, chunk, pb).await.is_ok(),
+        }
+    }
+}
+
 pub async fn create_db_entities_threaded(
     dbo: Option<Surreal<impl Connection>>, // None::<Surreal<Client>>
     reader: Box<dyn BufRead>,
     pb: Option<ProgressBar>,
     batch_size: usize,
     batch_num: usize,
+    create_version: CreateVersion,
 ) -> Result<(), Error> {
     let mut futures = Vec::new();
     let mut chunk = Vec::new();
     let mut chunk_counter = 0;
+    let mut lines = reader.lines();
+    let mut last_loop = false;
 
-    for line in reader.lines() {
-        chunk.push(line?);
+    loop {
+        let line = lines.next();
+        match line {
+            Some(line) => chunk.push(line?),
+            None => last_loop = true,
+        };
 
-        if chunk.len() >= batch_size {
+        if chunk.len() >= batch_size || last_loop {
             let dbo = dbo.clone();
             let pb = pb.clone();
 
@@ -119,7 +193,7 @@ pub async fn create_db_entities_threaded(
                 loop {
                     match dbo {
                         Some(ref db) => {
-                            if create_db_entities(db, &chunk, &pb).await.is_ok() {
+                            if create_version.run(db, &chunk, &pb).await {
                                 break;
                             }
                             if db.use_ns("wikidata").use_db("wikidata").await.is_err() {
@@ -132,7 +206,7 @@ pub async fn create_db_entities_threaded(
                             } else {
                                 continue;
                             };
-                            if create_db_entities(&db, &chunk, &pb).await.is_ok() {
+                            if create_version.run(&db, &chunk, &pb).await {
                                 break;
                             }
                         }
@@ -142,17 +216,20 @@ pub async fn create_db_entities_threaded(
                         panic!("Failed to create entities, too many retries");
                     }
                     retries += 1;
-                    sleep(Duration::from_secs(1)).await;
+                    sleep(Duration::from_millis(100)).await;
                 }
             }));
             chunk_counter += 1;
             chunk = Vec::new();
         }
 
-        if chunk_counter >= batch_num {
+        if chunk_counter >= batch_num || last_loop {
             join_all(futures).await;
             futures = Vec::new();
             chunk_counter = 0;
+        }
+        if last_loop {
+            break;
         }
     }
 
@@ -179,4 +256,25 @@ pub async fn create_db_ws() -> Result<Surreal<Client>, Error> {
     db.use_ns("wikidata").use_db("wikidata").await?;
 
     Ok(db)
+}
+
+pub async fn create_pb() -> ProgressBar {
+    let total_size = 110_000_000;
+    let pb = ProgressBar::new(total_size);
+    pb.set_style(
+        ProgressStyle::with_template(
+            "[{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} ETA:[{eta}]",
+        )
+        .unwrap()
+        .with_key(
+            "eta",
+            |state: &ProgressState, w: &mut dyn std::fmt::Write| {
+                let sec = state.eta().as_secs();
+                let min = (sec / 60) % 60;
+                let hr = (sec / 60) / 60;
+                write!(w, "{}:{:02}:{:02}", hr, min, sec % 60).unwrap()
+            },
+        ),
+    );
+    pb
 }

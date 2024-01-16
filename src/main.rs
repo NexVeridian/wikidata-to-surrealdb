@@ -1,7 +1,6 @@
 use anyhow::{Error, Ok, Result};
-use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use lazy_static::lazy_static;
-use std::{env, fmt::Write, io::BufRead};
+use std::{env, io::BufRead};
 use surrealdb::{engine::remote::ws::Client, Surreal};
 use tokio::time::{sleep, Duration};
 mod utils;
@@ -16,25 +15,16 @@ lazy_static! {
         .expect("THREADED_REQUESTS not set")
         .parse()
         .expect("Failed to parse THREADED_REQUESTS");
+    static ref WIKIDATA_BULK_INSERT: bool = env::var("WIKIDATA_BULK_INSERT")
+        .expect("WIKIDATA_BULK_INSERT not set")
+        .parse()
+        .expect("Failed to parse WIKIDATA_BULK_INSERT");
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     sleep(Duration::from_secs(10)).await;
-    let total_size = 113_000_000;
-
-    let pb = ProgressBar::new(total_size);
-    pb.set_style(
-        ProgressStyle::with_template(
-            "[{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} ETA:[{eta}]",
-        )?
-        .with_key("eta", |state: &ProgressState, w: &mut dyn Write| {
-            let sec = state.eta().as_secs();
-            let min = (sec / 60) % 60;
-            let hr = (sec / 60) / 60;
-            write!(w, "{}:{:02}:{:02}", hr, min, sec % 60).unwrap()
-        }),
-    );
+    let pb = create_pb().await;
 
     let db = create_db_ws().await?;
     let reader = File_Format::new(&WIKIDATA_FILE_FORMAT).reader(&WIKIDATA_FILE_NAME)?;
@@ -64,9 +54,26 @@ async fn main() -> Result<(), Error> {
                 pb.inc(100);
             }
         }
+    } else if *WIKIDATA_BULK_INSERT {
+        create_db_entities_threaded(
+            None::<Surreal<Client>>,
+            reader,
+            Some(pb.clone()),
+            2500,
+            100,
+            CreateVersion::Bulk,
+        )
+        .await?;
     } else {
-        create_db_entities_threaded(None::<Surreal<Client>>, reader, Some(pb.clone()), 2500, 100)
-            .await?;
+        create_db_entities_threaded(
+            None::<Surreal<Client>>,
+            reader,
+            Some(pb.clone()),
+            2500,
+            100,
+            CreateVersion::Single,
+        )
+        .await?;
     }
 
     pb.finish();

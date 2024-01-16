@@ -17,7 +17,7 @@ Run tests with `cargo t`
 ## Docker Compose
 `git clone`
 
-`docker compose -f docker-compose.dev.yml build && docker compose -f docker-compose.dev.yml up`
+`docker compose -f docker-compose.dev.yml build && docker compose -f docker-compose.dev.yml up --pull always -d`
 
 Remove the cargo cache for buildkit with `docker builder prune --filter type=exec.cachemount`
 
