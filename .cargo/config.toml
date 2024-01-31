@@ -4,6 +4,8 @@ rustflags = ["-C", "link-arg=-fuse-ld=/usr/bin/mold"]
 
 [alias]
 t = "nextest run"
+# https://github.com/tikv/pprof-rs?tab=readme-ov-file#use-with-pprof
+profile = "bench --bench bench -- --profile-time 10"
 
 [build]
 target-dir = "target/target"

@@ -1,6 +1,7 @@
 # Contributing code
-- Make sure the test pass
+- Make sure the test pass `cargo t`
 - Run `cargo clippy --fix --allow-dirty`
+- Run `cargo bench`
 
 # Dev Install
 ## Dev Containers

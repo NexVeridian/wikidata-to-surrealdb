@@ -100,6 +100,7 @@ pub async fn create_db_entities_bulk(
     db: &Surreal<impl Connection>,
     lines: &[String],
     pb: &Option<ProgressBar>,
+    batch_size: usize,
 ) -> Result<(), Error> {
     let lines = lines
         .iter()
@@ -108,9 +109,10 @@ pub async fn create_db_entities_bulk(
         .collect::<Vec<String>>();
 
     let mut data_vec: Vec<EntityMini> = Vec::new();
-    let mut claims_vec: Vec<Claims> = Vec::new();
+    let mut claims_vec: Vec<Claims> = Vec::with_capacity(batch_size);
     let mut property_vec: Vec<EntityMini> = Vec::new();
     let mut lexeme_vec: Vec<EntityMini> = Vec::new();
+    let mut first_loop = true;
 
     for line in lines {
         let json: Value = from_str(&line).expect("Failed to parse JSON");
@@ -123,6 +125,19 @@ pub async fn create_db_entities_bulk(
             _ => panic!("Unknown table"),
         }
         claims_vec.push(claims);
+
+        if first_loop {
+            first_loop = false;
+            if !data_vec.is_empty() {
+                data_vec.reserve(batch_size);
+            }
+            if !property_vec.is_empty() {
+                property_vec.reserve(batch_size);
+            }
+            if !lexeme_vec.is_empty() {
+                lexeme_vec.reserve(batch_size);
+            }
+        }
     }
 
     db.query("insert into Entity ($data_vec) RETURN NONE;")
@@ -139,7 +154,7 @@ pub async fn create_db_entities_bulk(
         .await?;
 
     if let Some(ref p) = pb {
-        p.inc(100)
+        p.inc(batch_size as u64)
     }
     Ok(())
 }
@@ -155,10 +170,13 @@ impl CreateVersion {
         db: &Surreal<impl Connection>,
         chunk: &Vec<String>,
         pb: &Option<ProgressBar>,
+        batch_size: usize,
     ) -> bool {
         match self {
             CreateVersion::Single => create_db_entities(db, chunk, pb).await.is_ok(),
-            CreateVersion::Bulk => create_db_entities_bulk(db, chunk, pb).await.is_ok(),
+            CreateVersion::Bulk => create_db_entities_bulk(db, chunk, pb, batch_size)
+                .await
+                .is_ok(),
         }
     }
 }
@@ -172,7 +190,7 @@ pub async fn create_db_entities_threaded(
     create_version: CreateVersion,
 ) -> Result<(), Error> {
     let mut futures = Vec::new();
-    let mut chunk = Vec::new();
+    let mut chunk = Vec::with_capacity(batch_size);
     let mut chunk_counter = 0;
     let mut lines = reader.lines();
     let mut last_loop = false;
@@ -193,7 +211,7 @@ pub async fn create_db_entities_threaded(
                 loop {
                     match dbo {
                         Some(ref db) => {
-                            if create_version.run(db, &chunk, &pb).await {
+                            if create_version.run(db, &chunk, &pb, batch_size).await {
                                 break;
                             }
                             if db.use_ns("wikidata").use_db("wikidata").await.is_err() {
@@ -206,7 +224,7 @@ pub async fn create_db_entities_threaded(
                             } else {
                                 continue;
                             };
-                            if create_version.run(&db, &chunk, &pb).await {
+                            if create_version.run(&db, &chunk, &pb, batch_size).await {
                                 break;
                             }
                         }
@@ -220,7 +238,7 @@ pub async fn create_db_entities_threaded(
                 }
             }));
             chunk_counter += 1;
-            chunk = Vec::new();
+            chunk = Vec::with_capacity(batch_size);
         }
 
         if chunk_counter >= batch_num || last_loop {

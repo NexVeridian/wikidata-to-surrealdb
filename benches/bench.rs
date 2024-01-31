@@ -1,5 +1,6 @@
 use anyhow::{Error, Ok, Result};
 use criterion::{criterion_group, criterion_main, Criterion};
+use pprof::criterion::{Output, PProfProfiler};
 use std::{env, time::Duration};
 use surrealdb::{
     engine::local::{Db, Mem},
@@ -73,7 +74,7 @@ fn bench(c: &mut Criterion) {
 
 criterion_group! {
     name = benches;
-    config = Criterion::default().measurement_time(Duration::from_secs(60));
+    config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Protobuf)).measurement_time(Duration::from_secs(60));
     targets= bench
 }
 criterion_main!(benches);
