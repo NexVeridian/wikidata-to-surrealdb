@@ -74,7 +74,7 @@ fn bench(c: &mut Criterion) {
 
 criterion_group! {
     name = benches;
-    config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Protobuf)).measurement_time(Duration::from_secs(60));
+    config = Criterion::default().with_profiler(PProfProfiler::new(120, Output::Protobuf)).measurement_time(Duration::from_secs(50));
     targets= bench
 }
 criterion_main!(benches);

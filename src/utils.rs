@@ -80,7 +80,7 @@ pub async fn create_db_entity(db: &Surreal<impl Connection>, line: &str) -> Resu
 
 pub async fn create_db_entities(
     db: &Surreal<impl Connection>,
-    lines: &Vec<String>,
+    lines: &[String],
     pb: &Option<ProgressBar>,
 ) -> Result<(), Error> {
     let mut counter = 0;
@@ -168,7 +168,7 @@ impl CreateVersion {
     pub async fn run(
         self,
         db: &Surreal<impl Connection>,
-        chunk: &Vec<String>,
+        chunk: &[String],
         pb: &Option<ProgressBar>,
         batch_size: usize,
     ) -> bool {
@@ -234,7 +234,7 @@ pub async fn create_db_entities_threaded(
                         panic!("Failed to create entities, too many retries");
                     }
                     retries += 1;
-                    sleep(Duration::from_millis(100)).await;
+                    sleep(Duration::from_millis(250)).await;
                 }
             }));
             chunk_counter += 1;
