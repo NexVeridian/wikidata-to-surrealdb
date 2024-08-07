@@ -20,7 +20,7 @@ https://www.wikidata.org/wiki/Special:EntityData/P527.json
 ```
 
 # Install
-Copy [docker-compose.yml](./docker-compose.yml)
+Copy [docker-compose-surrealdb.yml](./docker-compose-surrealdb.yml)
 
 Create data folder next to docker-compose.yml and .env, place data inside, and set the data type in .env   
 ```
@@ -28,14 +28,19 @@ Create data folder next to docker-compose.yml and .env, place data inside, and s
 │   ├── Entity.json
 │   ├── latest-all.json.bz2
 │   └── surrealdb
+├── Makefile
 ├── docker-compose.yml
 └── .env
 ```
 
-`docker compose up --pull always -d`
+### Then run:
+`make up-surrealdb`
+
+### Exit with:
+`make down-surrealdb`
 
 ## View Progress
-`docker attach wikidata-to-surrealdb`
+`make view`
 
 ## Example .env
 ``` 

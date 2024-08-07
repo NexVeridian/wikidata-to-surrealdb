@@ -32,13 +32,16 @@
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
 		"ghcr.io/devcontainers/features/git:1": {},
-		"ghcr.io/devcontainers/features/docker-in-docker": {}
-		// "ghcr.io/devcontainers/features/nix:1": {
-		// 	"packages": [
-		// 		"btop",
-		// 		"lazygit"
-		// 	]
-		// }
+		"ghcr.io/devcontainers/features/docker-in-docker": {},
+		"ghcr.io/devcontainers/features/nix:1": {
+			"packages": [
+				"btop",
+				"lazygit",
+				"cargo-nextest",
+				"nixpkgs-fmt"
+			],
+			"extraNixConfig": "experimental-features = nix-command flakes"
+		}
 	},
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
