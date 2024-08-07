@@ -17,6 +17,12 @@ async fn inti_db() -> Result<Surreal<Db>, Error> {
     Ok(db)
 }
 
+fn init_reader(file_format: &str, file_name: &str) -> Box<dyn BufRead> {
+    File_Format::new(file_format)
+        .reader(&format!("./tests/data/{}.{}", file_name, file_format))
+        .unwrap()
+}
+
 async fn entity_query(db: &Surreal<Db>) -> Result<Option<f32>, Error> {
     let x: Option<f32> = db
         .query(r#"
@@ -36,9 +42,7 @@ async fn entity_query(db: &Surreal<Db>) -> Result<Option<f32>, Error> {
 #[tokio::test]
 async fn entity() {
     let db = inti_db().await.unwrap();
-    let reader = File_Format::new("json")
-        .reader("tests/data/Entity.json")
-        .unwrap();
+    let reader = init_reader("json", "Entity");
 
     for line in reader.lines() {
         create_db_entity(&db, &line.unwrap()).await.unwrap();
@@ -80,9 +84,7 @@ async fn property_query(db: &Surreal<Db>) -> Result<Option<f32>, Error> {
 #[tokio::test]
 async fn property() {
     let db = inti_db().await.unwrap();
-    let reader = File_Format::new("json")
-        .reader("tests/data/Property.json")
-        .unwrap();
+    let reader = init_reader("json", "Property");
 
     for line in reader.lines() {
         create_db_entity(&db, &line.unwrap()).await.unwrap();
@@ -93,7 +95,7 @@ async fn property() {
 
 async fn property_threaded_insert(create_version: CreateVersion) -> Result<Surreal<Db>, Error> {
     let db = inti_db().await?;
-    let reader = File_Format::new("json").reader("tests/data/Property.json")?;
+    let reader = init_reader("json", "Property");
 
     create_db_entities_threaded(Some(db.clone()), reader, None, 1000, 100, create_version).await?;
     Ok(db)

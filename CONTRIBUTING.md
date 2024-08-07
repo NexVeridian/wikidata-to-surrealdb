@@ -13,7 +13,7 @@ Install docker, vscode and the [Dev Containers Extension](https://marketplace.vi
 
 Run code with `F5` or `cargo run`  
 
-Run tests with `cargo t`
+Run tests with `nix flake check` or `cargo t`
 
 ## Docker Compose
 `git clone`
