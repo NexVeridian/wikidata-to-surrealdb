@@ -7,7 +7,9 @@
 .env
 .gitignore
 Cargo.lock
-docker-compose.dev.yml
-docker-compose.yml
+docker-compose-surrealdb.dev.yml
+docker-compose-surrealdb.yml
 dockerfile
 *.md
+Makefile
+flake.nix

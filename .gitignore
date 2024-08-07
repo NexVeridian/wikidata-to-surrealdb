@@ -105,5 +105,3 @@ venv.bak/
 
 /data
 /target
-Cargo.lock
-.torrent
