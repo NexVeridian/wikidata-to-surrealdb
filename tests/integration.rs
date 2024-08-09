@@ -55,7 +55,7 @@ async fn entity_threaded_insert(create_version: CreateVersion) -> Result<Surreal
     let db = inti_db().await?;
     let reader = File_Format::new("json").reader("tests/data/Entity.json")?;
 
-    create_db_entities_threaded(Some(db.clone()), reader, None, 1000, 100, create_version).await?;
+    create_db_entities_threaded(Some(db.clone()), reader, None, 1_000, 100, create_version).await?;
     Ok(db)
 }
 
@@ -97,7 +97,7 @@ async fn property_threaded_insert(create_version: CreateVersion) -> Result<Surre
     let db = inti_db().await?;
     let reader = init_reader("json", "Property");
 
-    create_db_entities_threaded(Some(db.clone()), reader, None, 1000, 100, create_version).await?;
+    create_db_entities_threaded(Some(db.clone()), reader, None, 1_000, 100, create_version).await?;
     Ok(db)
 }
 

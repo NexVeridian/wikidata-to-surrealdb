@@ -43,7 +43,7 @@ Create data folder next to docker-compose.yml and .env, place data inside, and s
 `make view`
 
 ## Example .env
-``` 
+```
 DB_USER=root
 DB_PASSWORD=root
 WIKIDATA_LANG=en
@@ -57,7 +57,7 @@ CREATE_MODE=ThreadedSingle
 ```
 
 Env string CREATE_MODE must be in the enum CreateMode
-```
+```rust
 pub enum CreateMode {
     Single,
     ThreadedSingle,
@@ -104,6 +104,7 @@ pub struct Claim {
 ```
 
 ### ClaimData
+#### [Docs](https://docs.rs/wikidata/0.3.1/wikidata/enum.ClaimValueData.html)
 ```rust
 pub enum ClaimData {
     // Entity, Property, Lexeme Tables
@@ -111,7 +112,6 @@ pub enum ClaimData {
     ClaimValueData(ClaimValueData),
 }
 ```
-#### [Docs for ClaimValueData](https://docs.rs/wikidata/0.3.1/wikidata/enum.ClaimValueData.html)
 
 # Similar Projects
 - [wd2duckdb](https://github.com/weso/wd2duckdb)

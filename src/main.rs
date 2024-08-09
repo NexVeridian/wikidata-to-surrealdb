@@ -81,7 +81,7 @@ async fn main() -> Result<(), Error> {
                 reader,
                 Some(pb.clone()),
                 500,
-                1000,
+                1_000,
                 CreateVersion::Bulk,
             )
             .await?;
