@@ -1,9 +1,6 @@
 use anyhow::{Error, Ok, Result};
 use std::{env, io::BufRead};
-use surrealdb::{
-    engine::local::{Db, Mem},
-    Surreal,
-};
+use surrealdb::{engine::local::Db, Surreal};
 
 use wikidata_to_surrealdb::utils::*;
 
@@ -11,8 +8,7 @@ async fn inti_db() -> Result<Surreal<Db>, Error> {
     env::set_var("WIKIDATA_LANG", "en");
     env::set_var("OVERWRITE_DB", "true");
 
-    let db = Surreal::new::<Mem>(()).await?;
-    db.use_ns("wikidata").use_db("wikidata").await?;
+    let db = create_db_mem().await?;
 
     Ok(db)
 }

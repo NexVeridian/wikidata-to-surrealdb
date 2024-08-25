@@ -43,7 +43,7 @@ Create data folder next to docker-compose.yml and .env, place data inside, and s
 `make view`
 
 ## Example .env
-```
+```bash
 DB_USER=root
 DB_PASSWORD=root
 WIKIDATA_LANG=en
@@ -54,6 +54,7 @@ WIKIDATA_DB_PORT=surrealdb:8000
 # true=overwrite existing data, false=skip if already exists
 OVERWRITE_DB=false
 CREATE_MODE=ThreadedSingle
+#FILTER_PATH=../filter.surql
 ```
 
 Env string CREATE_MODE must be in the enum CreateMode
@@ -61,7 +62,9 @@ Env string CREATE_MODE must be in the enum CreateMode
 pub enum CreateMode {
     Single,
     ThreadedSingle,
-    ThreadedBulk, // Buggy
+    ThreadedBulk,
+    // must create a filter.surql file in the root directory
+    BulkFilter,
 }
 ```
 

@@ -18,6 +18,7 @@ lazy_static! {
         "Single" => CreateMode::Single,
         "ThreadedSingle" => CreateMode::ThreadedSingle,
         "ThreadedBulk" => CreateMode::ThreadedBulk,
+        "ThreadedBulkFilter" => CreateMode::ThreadedBulkFilter,
         _ => panic!("Unknown CREATE_MODE"),
     };
 }
@@ -27,6 +28,8 @@ pub enum CreateMode {
     Single,
     ThreadedSingle,
     ThreadedBulk,
+    // must create a filter.surql file in the root directory
+    ThreadedBulkFilter,
 }
 
 #[tokio::main]
@@ -83,6 +86,17 @@ async fn main() -> Result<(), Error> {
                 500,
                 1_000,
                 CreateVersion::Bulk,
+            )
+            .await?;
+        }
+        CreateMode::ThreadedBulkFilter => {
+            create_db_entities_threaded(
+                None::<Surreal<Client>>,
+                reader,
+                Some(pb.clone()),
+                500,
+                1_000,
+                CreateVersion::BulkFilter,
             )
             .await?;
         }

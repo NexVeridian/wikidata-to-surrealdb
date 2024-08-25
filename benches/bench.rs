@@ -2,10 +2,7 @@ use anyhow::{Error, Ok, Result};
 use criterion::{criterion_group, criterion_main, Criterion};
 use pprof::criterion::{Output, PProfProfiler};
 use std::{env, time::Duration};
-use surrealdb::{
-    engine::local::{Db, Mem},
-    Surreal,
-};
+use surrealdb::{engine::local::Db, Surreal};
 use tokio::runtime::Runtime;
 
 use wikidata_to_surrealdb::utils::*;
@@ -14,8 +11,7 @@ async fn inti_db() -> Result<Surreal<Db>, Error> {
     env::set_var("WIKIDATA_LANG", "en");
     env::set_var("OVERWRITE_DB", "true");
 
-    let db = Surreal::new::<Mem>(()).await?;
-    db.use_ns("wikidata").use_db("wikidata").await?;
+    let db = create_db_mem().await?;
 
     Ok(db)
 }
