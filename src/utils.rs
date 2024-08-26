@@ -184,11 +184,12 @@ pub async fn create_db_entities_bulk_filter(
         .map(char::from)
         .collect();
 
-    db_mem
-        .export(format!("../data/temp/{}.surql", file_name))
-        .await?;
-    db.import(format!("../data/temp{}.surql", file_name))
-        .await?;
+    let file_path = format!("data/temp/{}.surql", file_name);
+
+    db_mem.export(&file_path).await?;
+    db.import(&file_path).await?;
+
+    tokio::fs::remove_file(&file_path).await?;
 
     if let Some(ref p) = pb {
         p.inc(batch_size as u64)
