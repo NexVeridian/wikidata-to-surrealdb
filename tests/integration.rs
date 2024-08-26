@@ -62,6 +62,33 @@ async fn entity_threaded(#[case] version: CreateVersion) -> Result<(), Error> {
     Ok(())
 }
 
+#[tokio::test]
+async fn entity_threaded_filter() -> Result<(), Error> {
+    env::set_var("FILTER_PATH", "./tests/data/test_filter.surql");
+    let db = inti_db().await?;
+    let reader = init_reader("json", "bench");
+
+    create_db_entities_threaded(
+        Some(db.clone()),
+        reader,
+        None,
+        1_000,
+        100,
+        CreateVersion::BulkFilter,
+    )
+    .await?;
+
+    let count: Option<f32> = db
+        .query("return count(select * from Entity);")
+        .await
+        .unwrap()
+        .take(0)
+        .unwrap();
+
+    assert_eq!(3.0, count.unwrap());
+    Ok(())
+}
+
 async fn property_query(db: &Surreal<Db>) -> Result<Option<f32>, Error> {
     let x: Option<f32> = db
         .query("return count(select * from Property);")

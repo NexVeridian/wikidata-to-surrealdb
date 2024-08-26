@@ -68,6 +68,8 @@ pub enum CreateMode {
 }
 ```
 
+### [filter.surql examples](./Useful%20queries.md#filter.surql-examples)
+
 # [Dev Install](./CONTRIBUTING.md#dev-install)
 
 # How to Query
