@@ -1,5 +1,6 @@
 use anyhow::{Error, Result};
 use bzip2::read::MultiBzDecoder;
+use core::panic;
 use futures::future::join_all;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use lazy_static::lazy_static;
@@ -146,17 +147,17 @@ pub async fn create_db_entities_bulk(
         }
     }
 
-    db.query("insert into Entity ($data_vec) RETURN NONE;")
-        .bind(("data_vec", data_vec))
+    db.insert::<Vec<EntityMini>>("Entity")
+        .content(data_vec)
         .await?;
-    db.query("insert into Claims ($claims_vec) RETURN NONE;")
-        .bind(("claims_vec", claims_vec))
+    db.insert::<Vec<Claims>>("Claims")
+        .content(claims_vec)
         .await?;
-    db.query("insert into Property ($property_vec) RETURN NONE;")
-        .bind(("property_vec", property_vec))
+    db.insert::<Vec<EntityMini>>("Property")
+        .content(property_vec)
         .await?;
-    db.query("insert into Lexeme ($lexeme_vec) RETURN NONE;")
-        .bind(("lexeme_vec", lexeme_vec))
+    db.insert::<Vec<EntityMini>>("Lexeme")
+        .content(lexeme_vec)
         .await?;
 
     if let Some(ref p) = pb {
@@ -172,7 +173,7 @@ pub async fn create_db_entities_bulk_filter(
     batch_size: usize,
 ) -> Result<(), Error> {
     let db_mem = create_db_mem().await?;
-    create_db_entities_bulk(&db_mem, lines, pb, batch_size).await?;
+    create_db_entities_bulk(&db_mem, lines, &None, batch_size).await?;
 
     let filter = tokio::fs::read_to_string(&*FILTER_PATH).await?;
     db_mem.query(filter).await?;
@@ -189,6 +190,9 @@ pub async fn create_db_entities_bulk_filter(
     db.import(format!("../data/temp{}.surql", file_name))
         .await?;
 
+    if let Some(ref p) = pb {
+        p.inc(batch_size as u64)
+    }
     Ok(())
 }
 
