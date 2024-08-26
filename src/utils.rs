@@ -185,6 +185,7 @@ pub async fn create_db_entities_bulk_filter(
         .collect();
 
     let file_path = format!("data/temp/{}.surql", file_name);
+    tokio::fs::create_dir_all("data/temp").await?;
 
     db_mem.export(&file_path).await?;
     db.import(&file_path).await?;
