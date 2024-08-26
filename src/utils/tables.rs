@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::env;
-use surrealdb::sql::Thing;
+use surrealdb::sql::{Id, Thing};
 use wikidata::{ClaimValue, ClaimValueData, Entity, Lang, Pid, WikiId};
 
 lazy_static! {
@@ -19,18 +19,13 @@ pub enum ClaimData {
 impl ClaimData {
     fn from_cvd(cvd: ClaimValueData) -> Self {
         match cvd {
-            ClaimValueData::Item(qid) => ClaimData::Thing(Thing {
-                id: qid.0.into(),
-                tb: "Entity".to_string(),
-            }),
-            ClaimValueData::Property(pid) => ClaimData::Thing(Thing {
-                id: pid.0.into(),
-                tb: "Property".to_string(),
-            }),
-            ClaimValueData::Lexeme(lid) => ClaimData::Thing(Thing {
-                id: lid.0.into(),
-                tb: "Lexeme".to_string(),
-            }),
+            ClaimValueData::Item(qid) => ClaimData::Thing(Thing::from(("Entity", Id::from(qid.0)))),
+            ClaimValueData::Property(pid) => {
+                ClaimData::Thing(Thing::from(("Property", Id::from(pid.0))))
+            }
+            ClaimValueData::Lexeme(lid) => {
+                ClaimData::Thing(Thing::from(("Lexeme", Id::from(lid.0))))
+            }
             _ => ClaimData::ClaimValueData(cvd),
         }
     }
@@ -60,10 +55,7 @@ pub struct EntityMini {
 
 impl EntityMini {
     pub fn from_entity(entity: Entity) -> (Claims, Self) {
-        let thing_claim = Thing {
-            id: get_id_entity(&entity).id,
-            tb: "Claims".to_string(),
-        };
+        let thing_claim = Thing::from(("Claims", get_id_entity(&entity).id));
 
         (
             Claims {
@@ -86,19 +78,13 @@ impl EntityMini {
                 .iter()
                 .flat_map(|(pid, claim_value)| {
                     let mut flattened = vec![Claim {
-                        id: Thing {
-                            id: pid.0.into(),
-                            tb: "Property".to_string(),
-                        },
+                        id: Thing::from(("Property", Id::from(pid.0))),
                         value: ClaimData::from_cvd(claim_value.data.clone()),
                     }];
 
                     flattened.extend(claim_value.qualifiers.iter().map(
                         |(qualifier_pid, qualifier_value)| Claim {
-                            id: Thing {
-                                id: qualifier_pid.0.into(),
-                                tb: "Property".to_string(),
-                            },
+                            id: Thing::from(("Claims", Id::from(qualifier_pid.0))),
                             value: ClaimData::from_cvd(qualifier_value.clone()),
                         },
                     ));
@@ -117,7 +103,7 @@ fn get_id_entity(entity: &Entity) -> Thing {
         _ => todo!("Not implemented"),
     };
 
-    Thing { id: id.into(), tb }
+    Thing::from((tb, Id::from(id)))
 }
 
 fn get_name(entity: &Entity) -> String {
