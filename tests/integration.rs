@@ -9,7 +9,7 @@ async fn inti_db() -> Result<Surreal<Db>, Error> {
     env::set_var("WIKIDATA_LANG", "en");
     env::set_var("OVERWRITE_DB", "true");
 
-    let db = create_db_mem().await?;
+    let db = init_db::create_db_mem().await?;
 
     Ok(db)
 }

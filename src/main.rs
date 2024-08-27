@@ -3,6 +3,7 @@ use lazy_static::lazy_static;
 use std::{env, io::BufRead};
 use surrealdb::{engine::remote::ws::Client, Surreal};
 use tokio::time::{sleep, Duration};
+
 mod utils;
 use utils::*;
 
@@ -35,9 +36,9 @@ pub enum CreateMode {
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     sleep(Duration::from_secs(10)).await;
-    let pb = create_pb().await;
+    let pb = init_progress_bar::create_pb().await;
 
-    let db = create_db_ws().await?;
+    let db = init_db::create_db_ws().await?;
     let reader = File_Format::new(&WIKIDATA_FILE_FORMAT).reader(&WIKIDATA_FILE_NAME)?;
 
     match *CREATE_MODE {

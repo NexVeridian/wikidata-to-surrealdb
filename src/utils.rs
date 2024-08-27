@@ -2,7 +2,7 @@ use anyhow::{Error, Result};
 use bzip2::read::MultiBzDecoder;
 use core::panic;
 use futures::future::join_all;
-use indicatif::{ProgressBar, ProgressState, ProgressStyle};
+use indicatif::ProgressBar;
 use lazy_static::lazy_static;
 use rand::{distributions::Alphanumeric, Rng};
 use serde_json::{from_str, Value};
@@ -11,17 +11,12 @@ use std::{
     fs::File,
     io::{BufRead, BufReader},
 };
-use surrealdb::{
-    engine::{
-        local::{Db, Mem},
-        remote::ws::{Client, Ws},
-    },
-    opt::auth::Root,
-    Connection, Surreal,
-};
+use surrealdb::{Connection, Surreal};
 use tokio::time::{sleep, Duration};
 use wikidata::Entity;
 
+pub mod init_db;
+pub mod init_progress_bar;
 mod tables;
 use tables::*;
 
@@ -30,10 +25,6 @@ lazy_static! {
         .expect("OVERWRITE_DB not set")
         .parse()
         .expect("Failed to parse OVERWRITE_DB");
-    static ref DB_USER: String = env::var("DB_USER").expect("DB_USER not set");
-    static ref DB_PASSWORD: String = env::var("DB_PASSWORD").expect("DB_PASSWORD not set");
-    static ref WIKIDATA_DB_PORT: String =
-        env::var("WIKIDATA_DB_PORT").expect("WIKIDATA_DB_PORT not set");
     static ref FILTER_PATH: String =
         env::var("FILTER_PATH").unwrap_or("../filter.surql".to_string());
 }
@@ -172,7 +163,7 @@ pub async fn create_db_entities_bulk_filter(
     pb: &Option<ProgressBar>,
     batch_size: usize,
 ) -> Result<(), Error> {
-    let db_mem = create_db_mem().await?;
+    let db_mem = init_db::create_db_mem().await?;
     create_db_entities_bulk(&db_mem, lines, &None, batch_size).await?;
 
     let filter = tokio::fs::read_to_string(&*FILTER_PATH).await?;
@@ -263,7 +254,7 @@ pub async fn create_db_entities_threaded(
                             };
                         }
                         None => {
-                            let db = if let Ok(db) = create_db_ws().await {
+                            let db = if let Ok(db) = init_db::create_db_ws().await {
                                 db
                             } else {
                                 continue;
@@ -300,49 +291,9 @@ pub async fn create_db_entities_threaded(
             create_db_entities(&db, &chunk, &pb).await?;
         }
         None => {
-            create_db_entities(&create_db_ws().await?, &chunk, &pb).await?;
+            create_db_entities(&init_db::create_db_ws().await?, &chunk, &pb).await?;
         }
     }
     join_all(futures).await;
     Ok(())
-}
-
-pub async fn create_db_ws() -> Result<Surreal<Client>, Error> {
-    let db = Surreal::new::<Ws>(WIKIDATA_DB_PORT.as_str()).await?;
-
-    db.signin(Root {
-        username: &DB_USER,
-        password: &DB_PASSWORD,
-    })
-    .await?;
-    db.use_ns("wikidata").use_db("wikidata").await?;
-
-    Ok(db)
-}
-
-pub async fn create_db_mem() -> Result<Surreal<Db>, Error> {
-    let db = Surreal::new::<Mem>(()).await?;
-    db.use_ns("wikidata").use_db("wikidata").await?;
-    Ok(db)
-}
-
-pub async fn create_pb() -> ProgressBar {
-    let total_size = 110_000_000;
-    let pb = ProgressBar::new(total_size);
-    pb.set_style(
-        ProgressStyle::with_template(
-            "[{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} ETA:[{eta}]",
-        )
-        .unwrap()
-        .with_key(
-            "eta",
-            |state: &ProgressState, w: &mut dyn std::fmt::Write| {
-                let sec = state.eta().as_secs();
-                let min = (sec / 60) % 60;
-                let hr = (sec / 60) / 60;
-                write!(w, "{}:{:02}:{:02}", hr, min, sec % 60).unwrap()
-            },
-        ),
-    );
-    pb
 }
