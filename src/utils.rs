@@ -106,11 +106,10 @@ pub async fn create_db_entities_bulk(
         .filter(|line| line != "[" && line != "]")
         .collect::<Vec<String>>();
 
-    let mut data_vec: Vec<EntityMini> = Vec::new();
+    let mut data_vec: Vec<EntityMini> = Vec::with_capacity(batch_size);
     let mut claims_vec: Vec<Claims> = Vec::with_capacity(batch_size);
-    let mut property_vec: Vec<EntityMini> = Vec::new();
-    let mut lexeme_vec: Vec<EntityMini> = Vec::new();
-    let mut first_loop = true;
+    let mut property_vec: Vec<EntityMini> = Vec::with_capacity(batch_size);
+    let mut lexeme_vec: Vec<EntityMini> = Vec::with_capacity(batch_size);
 
     for line in lines {
         let json: Value = from_str(&line).expect("Failed to parse JSON");
@@ -123,19 +122,6 @@ pub async fn create_db_entities_bulk(
             _ => panic!("Unknown table"),
         }
         claims_vec.push(claims);
-
-        if first_loop {
-            first_loop = false;
-            if !data_vec.is_empty() {
-                data_vec.reserve(batch_size);
-            }
-            if !property_vec.is_empty() {
-                property_vec.reserve(batch_size);
-            }
-            if !lexeme_vec.is_empty() {
-                lexeme_vec.reserve(batch_size);
-            }
-        }
     }
 
     db.insert::<Vec<EntityMini>>("Entity")
