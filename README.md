@@ -53,17 +53,17 @@ WIKIDATA_FILE_NAME=data/latest-all.json.bz2
 WIKIDATA_DB_PORT=surrealdb:8000
 # true=overwrite existing data, false=skip if already exists
 OVERWRITE_DB=false
-CREATE_MODE=ThreadedSingle
+CREATE_VERSION=Bulk
 #FILTER_PATH=../filter.surql
 ```
 
-Env string CREATE_MODE must be in the enum CreateMode
+Env string CREATE_VERSION must be in the enum CREATE_VERSION
 ```rust
-pub enum CreateMode {
+pub enum CreateVersion {
     Single,
-    ThreadedSingle,
-    ThreadedBulk,
-    // must create a filter.surql file in the root directory
+    #[default]
+    Bulk,
+    /// must create a filter.surql file in the root directory
     BulkFilter,
 }
 ```

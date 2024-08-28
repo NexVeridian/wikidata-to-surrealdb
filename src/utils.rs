@@ -76,11 +76,12 @@ pub async fn create_entity(db: &Surreal<impl Connection>, line: &str) -> Result<
     Ok(())
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub enum CreateVersion {
     Single,
+    #[default]
     Bulk,
-    // must create a filter.surql file in the root directory
+    /// must create a filter.surql file in the root directory
     BulkFilter,
 }
 impl CreateVersion {
