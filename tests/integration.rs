@@ -42,7 +42,7 @@ async fn entity() {
     let reader = init_reader("json", "Entity");
 
     for line in reader.lines() {
-        create_db_entity(&db, &line.unwrap()).await.unwrap();
+        create_entity(&db, &line.unwrap()).await.unwrap();
     }
 
     assert_eq!(51.0, entity_query(&db).await.unwrap().unwrap())
@@ -56,7 +56,9 @@ async fn entity_threaded(#[case] version: CreateVersion) -> Result<(), Error> {
     let db = inti_db().await?;
     let reader = init_reader("json", "Entity");
 
-    create_db_entities_threaded(Some(db.clone()), reader, None, 1_000, 100, version).await?;
+    version
+        .run_threaded(Some(db.clone()), reader, None, 1_000, 100)
+        .await?;
 
     assert_eq!(51.0, entity_query(&db).await?.unwrap());
     Ok(())
@@ -68,15 +70,9 @@ async fn entity_threaded_filter() -> Result<(), Error> {
     let db = inti_db().await?;
     let reader = init_reader("json", "bench");
 
-    create_db_entities_threaded(
-        Some(db.clone()),
-        reader,
-        None,
-        1_000,
-        100,
-        CreateVersion::BulkFilter,
-    )
-    .await?;
+    CreateVersion::BulkFilter
+        .run_threaded(Some(db.clone()), reader, None, 1_000, 100)
+        .await?;
 
     let count: Option<f32> = db
         .query("return count(select * from Entity);")
@@ -105,7 +101,7 @@ async fn property() {
     let reader = init_reader("json", "Property");
 
     for line in reader.lines() {
-        create_db_entity(&db, &line.unwrap()).await.unwrap();
+        create_entity(&db, &line.unwrap()).await.unwrap();
     }
 
     assert_eq!(2.0, property_query(&db).await.unwrap().unwrap())
@@ -119,7 +115,9 @@ async fn property_threaded(#[case] version: CreateVersion) -> Result<(), Error> 
     let db = inti_db().await?;
     let reader = init_reader("json", "Property");
 
-    create_db_entities_threaded(Some(db.clone()), reader, None, 1_000, 100, version).await?;
+    version
+        .run_threaded(Some(db.clone()), reader, None, 1_000, 100)
+        .await?;
 
     assert_eq!(2.0, property_query(&db).await?.unwrap());
     Ok(())

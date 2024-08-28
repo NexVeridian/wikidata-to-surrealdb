@@ -49,7 +49,7 @@ async fn main() -> Result<(), Error> {
                 let line = line?;
 
                 loop {
-                    if create_db_entity(&db, &line).await.is_ok() {
+                    if create_entity(&db, &line).await.is_ok() {
                         break;
                     }
                     if retries >= 60 * 10 {
@@ -69,37 +69,37 @@ async fn main() -> Result<(), Error> {
             }
         }
         CreateMode::ThreadedSingle => {
-            create_db_entities_threaded(
-                None::<Surreal<Client>>,
-                reader,
-                Some(pb.clone()),
-                2_500,
-                100,
-                CreateVersion::Single,
-            )
-            .await?;
+            CreateVersion::Single
+                .run_threaded(
+                    None::<Surreal<Client>>,
+                    reader,
+                    Some(pb.clone()),
+                    2_500,
+                    100,
+                )
+                .await?;
         }
         CreateMode::ThreadedBulk => {
-            create_db_entities_threaded(
-                None::<Surreal<Client>>,
-                reader,
-                Some(pb.clone()),
-                500,
-                1_000,
-                CreateVersion::Bulk,
-            )
-            .await?;
+            CreateVersion::Bulk
+                .run_threaded(
+                    None::<Surreal<Client>>,
+                    reader,
+                    Some(pb.clone()),
+                    500,
+                    1_000,
+                )
+                .await?;
         }
         CreateMode::ThreadedBulkFilter => {
-            create_db_entities_threaded(
-                None::<Surreal<Client>>,
-                reader,
-                Some(pb.clone()),
-                500,
-                1_000,
-                CreateVersion::BulkFilter,
-            )
-            .await?;
+            CreateVersion::BulkFilter
+                .run_threaded(
+                    None::<Surreal<Client>>,
+                    reader,
+                    Some(pb.clone()),
+                    500,
+                    1_000,
+                )
+                .await?;
         }
     }
 

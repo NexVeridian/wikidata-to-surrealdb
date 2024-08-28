@@ -34,5 +34,6 @@ pub async fn create_db_ws() -> Result<Surreal<Client>, Error> {
 pub async fn create_db_mem() -> Result<Surreal<Db>, Error> {
     let db = Surreal::new::<Mem>(()).await?;
     db.use_ns("wikidata").use_db("wikidata").await?;
+
     Ok(db)
 }

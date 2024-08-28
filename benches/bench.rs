@@ -28,16 +28,10 @@ fn bench(c: &mut Criterion) {
                     .reader("tests/data/bench.json")
                     .unwrap();
 
-                create_db_entities_threaded(
-                    Some(db.clone()),
-                    reader,
-                    None,
-                    1000,
-                    100,
-                    CreateVersion::Single,
-                )
-                .await
-                .unwrap();
+                CreateVersion::Single
+                    .run_threaded(Some(db.clone()), reader, None, 1000, 100)
+                    .await
+                    .unwrap();
             })
         })
     });
@@ -51,16 +45,10 @@ fn bench(c: &mut Criterion) {
                     .reader("tests/data/bench.json")
                     .unwrap();
 
-                create_db_entities_threaded(
-                    Some(db.clone()),
-                    reader,
-                    None,
-                    1000,
-                    100,
-                    CreateVersion::Bulk,
-                )
-                .await
-                .unwrap();
+                CreateVersion::Bulk
+                    .run_threaded(Some(db.clone()), reader, None, 1000, 100)
+                    .await
+                    .unwrap();
             })
         })
     });
