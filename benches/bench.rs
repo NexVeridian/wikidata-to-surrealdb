@@ -5,6 +5,7 @@ use std::{env, time::Duration};
 use surrealdb::{engine::local::Db, Surreal};
 use tokio::runtime::Runtime;
 
+use init_reader::File_Format;
 use wikidata_to_surrealdb::utils::*;
 
 async fn inti_db() -> Result<Surreal<Db>, Error> {
@@ -29,7 +30,7 @@ fn bench(c: &mut Criterion) {
                     .unwrap();
 
                 CreateVersion::Single
-                    .run_threaded(Some(db.clone()), reader, None, 1000, 100)
+                    .run(Some(db.clone()), reader, None, 1000, 100)
                     .await
                     .unwrap();
             })
@@ -46,7 +47,7 @@ fn bench(c: &mut Criterion) {
                     .unwrap();
 
                 CreateVersion::Bulk
-                    .run_threaded(Some(db.clone()), reader, None, 1000, 100)
+                    .run(Some(db.clone()), reader, None, 1000, 100)
                     .await
                     .unwrap();
             })

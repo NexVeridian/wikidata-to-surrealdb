@@ -1,22 +1,17 @@
 use anyhow::{Error, Result};
-use bzip2::read::MultiBzDecoder;
-use core::panic;
 use futures::future::join_all;
 use indicatif::ProgressBar;
 use lazy_static::lazy_static;
 use rand::{distributions::Alphanumeric, Rng};
 use serde_json::{from_str, Value};
-use std::{
-    env,
-    fs::File,
-    io::{BufRead, BufReader},
-};
+use std::{env, io::BufRead};
 use surrealdb::{Connection, Surreal};
 use tokio::time::{sleep, Duration};
 use wikidata::Entity;
 
 pub mod init_db;
 pub mod init_progress_bar;
+pub mod init_reader;
 mod tables;
 use tables::*;
 
@@ -27,28 +22,6 @@ lazy_static! {
         .expect("Failed to parse OVERWRITE_DB");
     static ref FILTER_PATH: String =
         env::var("FILTER_PATH").unwrap_or("../filter.surql".to_string());
-}
-
-#[allow(non_camel_case_types)]
-pub enum File_Format {
-    json,
-    bz2,
-}
-impl File_Format {
-    pub fn new(file: &str) -> Self {
-        match file {
-            "json" => Self::json,
-            "bz2" => Self::bz2,
-            _ => panic!("Unknown file format"),
-        }
-    }
-    pub fn reader(self, file: &str) -> Result<Box<dyn BufRead>, Error> {
-        let file = File::open(file)?;
-        match self {
-            File_Format::json => Ok(Box::new(BufReader::new(file))),
-            File_Format::bz2 => Ok(Box::new(BufReader::new(MultiBzDecoder::new(file)))),
-        }
-    }
 }
 
 pub async fn create_entity(db: &Surreal<impl Connection>, line: &str) -> Result<(), Error> {
@@ -84,28 +57,12 @@ pub enum CreateVersion {
     /// must create a filter.surql file in the root directory
     BulkFilter,
 }
+
 impl CreateVersion {
     pub async fn run(
         self,
-        db: &Surreal<impl Connection>,
-        chunk: &[String],
-        pb: &Option<ProgressBar>,
-        batch_size: usize,
-    ) -> bool {
-        match self {
-            CreateVersion::Single => self.create_single(db, chunk, pb).await.is_ok(),
-            CreateVersion::Bulk => self.create_bulk(db, chunk, pb, batch_size).await.is_ok(),
-            CreateVersion::BulkFilter => self
-                .create_bulk_filter(db, chunk, pb, batch_size)
-                .await
-                .is_ok(),
-        }
-    }
-
-    pub async fn run_threaded(
-        self,
-        dbo: Option<Surreal<impl Connection>>,
-        reader: Box<dyn BufRead>, //  None::<Surreal<Client>>
+        dbo: Option<Surreal<impl Connection>>, // None::<Surreal<Client>>
+        reader: Box<dyn BufRead>,
         pb: Option<ProgressBar>,
         batch_size: usize,
         batch_num: usize,
@@ -146,7 +103,7 @@ impl CreateVersion {
             loop {
                 match dbo {
                     Some(ref db) => {
-                        if create_version.run(db, &chunk, &pb, batch_size).await {
+                        if create_version.create(db, &chunk, &pb, batch_size).await {
                             break;
                         }
                     }
@@ -155,7 +112,7 @@ impl CreateVersion {
                             Ok(db) => db,
                             Err(_) => continue,
                         };
-                        if create_version.run(&db, &chunk, &pb, batch_size).await {
+                        if create_version.create(&db, &chunk, &pb, batch_size).await {
                             break;
                         }
                     }
@@ -168,6 +125,23 @@ impl CreateVersion {
                 sleep(Duration::from_millis(250)).await;
             }
         })
+    }
+
+    async fn create(
+        self,
+        db: &Surreal<impl Connection>,
+        chunk: &[String],
+        pb: &Option<ProgressBar>,
+        batch_size: usize,
+    ) -> bool {
+        match self {
+            CreateVersion::Single => self.create_single(db, chunk, pb).await.is_ok(),
+            CreateVersion::Bulk => self.create_bulk(db, chunk, pb, batch_size).await.is_ok(),
+            CreateVersion::BulkFilter => self
+                .create_bulk_filter(db, chunk, pb, batch_size)
+                .await
+                .is_ok(),
+        }
     }
 
     async fn create_single(

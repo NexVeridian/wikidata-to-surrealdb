@@ -3,6 +3,7 @@ use rstest::rstest;
 use std::{env, io::BufRead};
 use surrealdb::{engine::local::Db, Surreal};
 
+use init_reader::File_Format;
 use wikidata_to_surrealdb::utils::*;
 
 async fn inti_db() -> Result<Surreal<Db>, Error> {
@@ -57,7 +58,7 @@ async fn entity_threaded(#[case] version: CreateVersion) -> Result<(), Error> {
     let reader = init_reader("json", "Entity");
 
     version
-        .run_threaded(Some(db.clone()), reader, None, 1_000, 100)
+        .run(Some(db.clone()), reader, None, 1_000, 100)
         .await?;
 
     assert_eq!(51.0, entity_query(&db).await?.unwrap());
@@ -71,7 +72,7 @@ async fn entity_threaded_filter() -> Result<(), Error> {
     let reader = init_reader("json", "bench");
 
     CreateVersion::BulkFilter
-        .run_threaded(Some(db.clone()), reader, None, 1_000, 100)
+        .run(Some(db.clone()), reader, None, 1_000, 100)
         .await?;
 
     let count: Option<f32> = db
@@ -116,7 +117,7 @@ async fn property_threaded(#[case] version: CreateVersion) -> Result<(), Error> 
     let reader = init_reader("json", "Property");
 
     version
-        .run_threaded(Some(db.clone()), reader, None, 1_000, 100)
+        .run(Some(db.clone()), reader, None, 1_000, 100)
         .await?;
 
     assert_eq!(2.0, property_query(&db).await?.unwrap());

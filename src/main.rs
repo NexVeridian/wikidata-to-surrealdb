@@ -5,6 +5,7 @@ use surrealdb::{engine::remote::ws::Client, Surreal};
 use tokio::time::{sleep, Duration};
 
 mod utils;
+use init_reader::File_Format;
 use utils::*;
 
 lazy_static! {
@@ -30,7 +31,7 @@ async fn main() -> Result<(), Error> {
     let reader = File_Format::new(&WIKIDATA_FILE_FORMAT).reader(&WIKIDATA_FILE_NAME)?;
 
     CREATE_VERSION
-        .run_threaded(
+        .run(
             None::<Surreal<Client>>,
             reader,
             Some(pb.clone()),
