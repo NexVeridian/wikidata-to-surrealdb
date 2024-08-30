@@ -65,7 +65,7 @@ pub enum CreateVersion {
     Single,
     #[default]
     Bulk,
-    /// must create a filter.surql file in the root directory
+    /// must create a filter.surql file in the data directory
     BulkFilter,
 }
 ```

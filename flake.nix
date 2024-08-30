@@ -4,10 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
-    crane = {
-      url = "github:ipetkov/crane";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    crane.url = "github:ipetkov/crane";
 
     fenix = {
       url = "github:nix-community/fenix";
@@ -31,8 +28,21 @@
         inherit (pkgs) lib;
 
         craneLib = crane.mkLib pkgs;
+
         # src = craneLib.cleanCargoSource ./.;
-        src = ./.;
+        # src = ./.;
+        src =
+          let
+            jsonFilter = path: _type: builtins.match ".*json$" path != null;
+            surqlFilter = path: _type: builtins.match ".*surql$" path != null;
+            customFilter = path: type:
+              (jsonFilter path type) || (surqlFilter path type) || (craneLib.filterCargoSources path type);
+          in
+          pkgs.lib.cleanSourceWith {
+            src = ./.;
+            filter = customFilter;
+            name = "source";
+          };
 
         # Common arguments can be set here to avoid repeating them later
         commonArgs = {
@@ -125,7 +135,7 @@
 
         packages = {
           default = my-crate;
-          dockerImage = dockerImage;
+          inherit my-crate dockerImage;
         };
 
         apps.default = flake-utils.lib.mkApp {

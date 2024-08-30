@@ -11,7 +11,20 @@ delete $claims;
 delete $entity;
 ```
 
-# Get number of episodes
+# Select for media
+```
+SELECT
+*,
+# number of episodes
+(claims.claims[WHERE id = Property:1113].value.ClaimValueData.Quantity.amount)[0] AS episodes,
+# part of the series
+(claims.claims[WHERE id = Property:179].value.Thing)[0] AS parent,
+# has part(s)
+claims.claims[WHERE id = Property:527].value.Thing AS children
+FROM Entity;
+```
+
+## Get number of episodes
 ```
 let $number_of_episodes = (select claims.claims[where id = Property:1113][0].value.ClaimValueData.Quantity.amount as number_of_episodes from Entity where label = "Black Clover, season 1")[0].number_of_episodes;
 
@@ -20,7 +33,7 @@ return $number_of_episodes;
 update Entity SET number_of_episodes=$number_of_episodes where label = "Black Clover, season 1";
 ```
 
-# Get Parts
+## Get Parts
 ```
 let $parts = (select claims.claims[where id = Property:527].value.Thing as parts from Entity where label = "Black Clover")[0].parts;
 

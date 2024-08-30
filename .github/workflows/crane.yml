@@ -13,7 +13,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  NIX_CONFIG: 'download-buffer-size = 5000MB'
 
 jobs:
   check:
