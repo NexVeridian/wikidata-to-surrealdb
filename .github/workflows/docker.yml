@@ -20,6 +20,7 @@ env:
   REGISTRY: ghcr.io
   # github.repository as <account>/<repo>
   IMAGE_NAME: ${{ github.repository }}
+  NIX_CONFIG: 'download-buffer-size = 5000MB'
 
 jobs:
   build:

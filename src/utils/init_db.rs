@@ -5,7 +5,7 @@ use std::env;
 use surrealdb::{
     engine::{
         local::{Db, Mem},
-        remote::ws::{Client, Ws},
+        remote::http::{Client, Http},
     },
     opt::auth::Root,
     Surreal,
@@ -18,8 +18,8 @@ lazy_static! {
         env::var("WIKIDATA_DB_PORT").expect("WIKIDATA_DB_PORT not set");
 }
 
-pub async fn create_db_ws() -> Result<Surreal<Client>, Error> {
-    let db = Surreal::new::<Ws>(WIKIDATA_DB_PORT.as_str()).await?;
+pub async fn create_db_remote() -> Result<Surreal<Client>, Error> {
+    let db = Surreal::new::<Http>(WIKIDATA_DB_PORT.as_str()).await?;
 
     db.signin(Root {
         username: &DB_USER,

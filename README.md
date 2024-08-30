@@ -27,7 +27,9 @@ Create data folder next to docker-compose.yml and .env, place data inside, and s
 ├── data
 │   ├── Entity.json
 │   ├── latest-all.json.bz2
-│   └── surrealdb
+│   ├── filter.surql
+│   ├── surrealdb
+│   └── temp
 ├── Makefile
 ├── docker-compose.yml
 └── .env
@@ -54,7 +56,7 @@ WIKIDATA_DB_PORT=surrealdb:8000
 # true=overwrite existing data, false=skip if already exists
 OVERWRITE_DB=false
 CREATE_VERSION=Bulk
-#FILTER_PATH=../filter.surql
+#FILTER_PATH=data/filter.surql
 ```
 
 Env string CREATE_VERSION must be in the enum CREATE_VERSION

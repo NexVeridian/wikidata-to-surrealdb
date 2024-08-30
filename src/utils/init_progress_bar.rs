@@ -1,7 +1,7 @@
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 
 pub async fn create_pb() -> ProgressBar {
-    let total_size = 110_000_000;
+    let total_size = 112_500_000;
     let pb = ProgressBar::new(total_size);
     pb.set_style(
         ProgressStyle::with_template(

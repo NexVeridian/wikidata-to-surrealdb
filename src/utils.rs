@@ -1,4 +1,5 @@
 use anyhow::{Error, Result};
+use core::panic;
 use futures::future::join_all;
 use indicatif::ProgressBar;
 use lazy_static::lazy_static;
@@ -21,7 +22,7 @@ lazy_static! {
         .parse()
         .expect("Failed to parse OVERWRITE_DB");
     static ref FILTER_PATH: String =
-        env::var("FILTER_PATH").unwrap_or("../filter.surql".to_string());
+        env::var("FILTER_PATH").unwrap_or("data/filter.surql".to_string());
 }
 
 pub async fn create_entity(db: &Surreal<impl Connection>, line: &str) -> Result<(), Error> {
@@ -108,7 +109,7 @@ impl CreateVersion {
                         }
                     }
                     None => {
-                        let db = match init_db::create_db_ws().await {
+                        let db = match init_db::create_db_remote().await {
                             Ok(db) => db,
                             Err(_) => continue,
                         };
@@ -141,6 +142,12 @@ impl CreateVersion {
                 .create_bulk_filter(db, chunk, pb, batch_size)
                 .await
                 .is_ok(),
+            // CreateVersion::BulkFilter => {
+            //     if let Err(err) = self.create_bulk_filter(db, chunk, pb, batch_size).await {
+            //         panic!("Failed to create entities: {}", err);
+            //     }
+            //     true
+            // }
         }
     }
 
@@ -233,7 +240,6 @@ impl CreateVersion {
             .collect();
 
         let file_path = format!("data/temp/{}.surql", file_name);
-        tokio::fs::create_dir_all("data/temp").await?;
 
         db_mem.export(&file_path).await?;
         db.import(&file_path).await?;

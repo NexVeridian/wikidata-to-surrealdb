@@ -1,7 +1,7 @@
 use anyhow::{Error, Ok, Result};
 use lazy_static::lazy_static;
 use std::env;
-use surrealdb::{engine::remote::ws::Client, Surreal};
+use surrealdb::{engine::remote::http::Client, Surreal};
 use tokio::time::{sleep, Duration};
 
 mod utils;
@@ -29,6 +29,10 @@ async fn main() -> Result<(), Error> {
     sleep(Duration::from_secs(10)).await;
     let pb = init_progress_bar::create_pb().await;
     let reader = File_Format::new(&WIKIDATA_FILE_FORMAT).reader(&WIKIDATA_FILE_NAME)?;
+
+    tokio::fs::create_dir_all("data/temp").await?;
+    tokio::fs::remove_dir_all("data/temp").await?;
+    tokio::fs::create_dir_all("data/temp").await?;
 
     CREATE_VERSION
         .run(
