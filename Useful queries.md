@@ -11,6 +11,23 @@ delete $claims;
 delete $entity;
 ```
 
+# Create a view for media
+```
+DEFINE TABLE Media TYPE NORMAL AS
+SELECT
+*,
+# Number of episodes
+(claims.claims[WHERE id = Property:1113].value.ClaimValueData.Quantity.amount)[0] AS episodes,
+# Part of the series (parent)
+(claims.claims[WHERE id = Property:179].value.Thing)[0] AS parent,
+# Has part(s) (children)
+claims.claims[WHERE id = Property:527].value.Thing AS children
+FROM Entity;
+
+# Full-Text Search
+DEFINE ANALYZER OVERWRITE blank_english TOKENIZERS blank FILTERS lowercase, ascii, snowball(english);
+```
+
 # Select for media
 ```
 SELECT

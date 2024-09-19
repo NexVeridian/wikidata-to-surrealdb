@@ -25,34 +25,8 @@ lazy_static! {
         env::var("FILTER_PATH").unwrap_or("data/filter.surql".to_string());
 }
 
-pub async fn create_entity(db: &Surreal<impl Connection>, line: &str) -> Result<(), Error> {
-    let line = line.trim().trim_end_matches(',').to_string();
-    if line == "[" || line == "]" {
-        return Ok(());
-    }
-
-    let json: Value = from_str(&line)?;
-    let data = Entity::from_json(json).expect("Failed to parse JSON");
-
-    let (mut claims, mut data) = EntityMini::from_entity(data);
-
-    let id = data.id.clone().expect("No ID");
-    data.id = None;
-    if db.create::<Option<EntityMini>>(&id).await.is_err() && *OVERWRITE_DB {
-        db.update::<Option<EntityMini>>(&id).content(data).await?;
-    }
-
-    let id = claims.id.clone().expect("No ID");
-    claims.id = None;
-    if db.create::<Option<Claims>>(&id).await.is_err() && *OVERWRITE_DB {
-        db.update::<Option<Claims>>(&id).content(claims).await?;
-    }
-    Ok(())
-}
-
 #[derive(Clone, Copy, Default)]
 pub enum CreateVersion {
-    Single,
     #[default]
     Bulk,
     /// must create a filter.surql file in the root directory
@@ -136,7 +110,6 @@ impl CreateVersion {
         batch_size: usize,
     ) -> bool {
         match self {
-            CreateVersion::Single => self.create_single(db, chunk, pb).await.is_ok(),
             CreateVersion::Bulk => self.create_bulk(db, chunk, pb, batch_size).await.is_ok(),
             CreateVersion::BulkFilter => self
                 .create_bulk_filter(db, chunk, pb, batch_size)
@@ -149,25 +122,6 @@ impl CreateVersion {
             //     true
             // }
         }
-    }
-
-    async fn create_single(
-        self,
-        db: &Surreal<impl Connection>,
-        lines: &[String],
-        pb: &Option<ProgressBar>,
-    ) -> Result<(), Error> {
-        let mut counter = 0;
-        for line in lines {
-            create_entity(db, line).await?;
-            counter += 1;
-            if counter % 100 == 0 {
-                if let Some(ref p) = pb {
-                    p.inc(100)
-                }
-            }
-        }
-        Ok(())
     }
 
     async fn create_bulk(
@@ -183,7 +137,7 @@ impl CreateVersion {
             .filter(|line| line != "[" && line != "]")
             .collect::<Vec<String>>();
 
-        let mut data_vec: Vec<EntityMini> = Vec::with_capacity(batch_size);
+        let mut entity_vec: Vec<EntityMini> = Vec::with_capacity(batch_size);
         let mut claims_vec: Vec<Claims> = Vec::with_capacity(batch_size);
         let mut property_vec: Vec<EntityMini> = Vec::with_capacity(batch_size);
         let mut lexeme_vec: Vec<EntityMini> = Vec::with_capacity(batch_size);
@@ -195,24 +149,39 @@ impl CreateVersion {
             match data.id.clone().expect("No ID").tb.as_str() {
                 "Property" => property_vec.push(data),
                 "Lexeme" => lexeme_vec.push(data),
-                "Entity" => data_vec.push(data),
+                "Entity" => entity_vec.push(data),
                 _ => panic!("Unknown table"),
             }
             claims_vec.push(claims);
         }
 
-        db.insert::<Vec<EntityMini>>("Entity")
-            .content(data_vec)
-            .await?;
-        db.insert::<Vec<Claims>>("Claims")
-            .content(claims_vec)
-            .await?;
-        db.insert::<Vec<EntityMini>>("Property")
-            .content(property_vec)
-            .await?;
-        db.insert::<Vec<EntityMini>>("Lexeme")
-            .content(lexeme_vec)
-            .await?;
+        if *OVERWRITE_DB {
+            db.upsert::<Vec<EntityMini>>("Entity")
+                .content(entity_vec)
+                .await?;
+            db.upsert::<Vec<Claims>>("Claims")
+                .content(claims_vec)
+                .await?;
+            db.upsert::<Vec<EntityMini>>("Property")
+                .content(property_vec)
+                .await?;
+            db.upsert::<Vec<EntityMini>>("Lexeme")
+                .content(lexeme_vec)
+                .await?;
+        } else {
+            db.insert::<Vec<EntityMini>>("Entity")
+                .content(entity_vec)
+                .await?;
+            db.insert::<Vec<Claims>>("Claims")
+                .content(claims_vec)
+                .await?;
+            db.insert::<Vec<EntityMini>>("Property")
+                .content(property_vec)
+                .await?;
+            db.insert::<Vec<EntityMini>>("Lexeme")
+                .content(lexeme_vec)
+                .await?;
+        }
 
         if let Some(ref p) = pb {
             p.inc(batch_size as u64)

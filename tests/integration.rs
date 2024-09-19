@@ -8,7 +8,7 @@ use wikidata_to_surrealdb::utils::*;
 
 async fn inti_db() -> Result<Surreal<Db>, Error> {
     env::set_var("WIKIDATA_LANG", "en");
-    env::set_var("OVERWRITE_DB", "true");
+    env::set_var("OVERWRITE_DB", "false");
 
     let db = init_db::create_db_mem().await?;
 
@@ -37,20 +37,7 @@ async fn entity_query(db: &Surreal<Db>) -> Result<Option<f32>, Error> {
     Ok(x)
 }
 
-#[tokio::test]
-async fn entity() {
-    let db = inti_db().await.unwrap();
-    let reader = init_reader("json", "Entity");
-
-    for line in reader.lines() {
-        create_entity(&db, &line.unwrap()).await.unwrap();
-    }
-
-    assert_eq!(51.0, entity_query(&db).await.unwrap().unwrap())
-}
-
 #[rstest]
-#[case(CreateVersion::Single)]
 #[case(CreateVersion::Bulk)]
 #[tokio::test]
 async fn entity_threaded(#[case] version: CreateVersion) -> Result<(), Error> {
@@ -96,20 +83,7 @@ async fn property_query(db: &Surreal<Db>) -> Result<Option<f32>, Error> {
     Ok(x)
 }
 
-#[tokio::test]
-async fn property() {
-    let db = inti_db().await.unwrap();
-    let reader = init_reader("json", "Property");
-
-    for line in reader.lines() {
-        create_entity(&db, &line.unwrap()).await.unwrap();
-    }
-
-    assert_eq!(2.0, property_query(&db).await.unwrap().unwrap())
-}
-
 #[rstest]
-#[case(CreateVersion::Single)]
 #[case(CreateVersion::Bulk)]
 #[tokio::test]
 async fn property_threaded(#[case] version: CreateVersion) -> Result<(), Error> {

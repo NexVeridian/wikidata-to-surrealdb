@@ -12,3 +12,10 @@ $(addprefix down-,$(COMPOSE_FILES)):
 
 view:
 	docker attach wikidata-to-surrealdb
+
+precommit:
+	rustup update
+	cargo update
+	cargo fmt
+	cargo t
+	cargo clippy --fix --allow-dirty

@@ -20,23 +20,6 @@ async fn inti_db() -> Result<Surreal<Db>, Error> {
 fn bench(c: &mut Criterion) {
     let mut group = c.benchmark_group("Create DB Entities");
 
-    group.bench_function("Single Insert", |b| {
-        b.iter(|| {
-            let rt = Runtime::new().unwrap();
-            rt.block_on(async {
-                let db = inti_db().await.unwrap();
-                let reader = File_Format::new("json")
-                    .reader("tests/data/bench.json")
-                    .unwrap();
-
-                CreateVersion::Single
-                    .run(Some(db.clone()), reader, None, 1000, 100)
-                    .await
-                    .unwrap();
-            })
-        })
-    });
-
     group.bench_function("Bulk Insert", |b| {
         b.iter(|| {
             let rt = Runtime::new().unwrap();

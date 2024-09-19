@@ -62,7 +62,6 @@ CREATE_VERSION=Bulk
 Env string CREATE_VERSION must be in the enum CREATE_VERSION
 ```rust
 pub enum CreateVersion {
-    Single,
     #[default]
     Bulk,
     /// must create a filter.surql file in the data directory

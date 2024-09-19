@@ -17,7 +17,6 @@ lazy_static! {
         .expect("CREATE_VERSION not set")
         .as_str()
     {
-        "Single" => CreateVersion::Single,
         "Bulk" => CreateVersion::Bulk,
         "BulkFilter" => CreateVersion::BulkFilter,
         _ => panic!("Unknown CREATE_VERSION"),
