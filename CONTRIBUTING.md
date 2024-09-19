@@ -1,5 +1,5 @@
 # Contributing code
-- Run `make precommit`
+- Run `make precommit` or `make check` if using nix flakes
 
 # Dev Install
 ## Dev Containers

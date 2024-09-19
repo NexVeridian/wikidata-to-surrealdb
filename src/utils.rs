@@ -75,6 +75,7 @@ impl CreateVersion {
 
         tokio::spawn(async move {
             let mut retries = 0;
+
             loop {
                 match dbo {
                     Some(ref db) => {
@@ -93,11 +94,12 @@ impl CreateVersion {
                     }
                 }
 
-                if retries >= 60 * 10 {
+                // Exponential backoff with cap at 60 seconds
+                if retries == 30 {
                     panic!("Failed to create entities, too many retries");
                 }
+                sleep(Duration::from_millis(250) * 2_u32.pow(retries.min(8))).await;
                 retries += 1;
-                sleep(Duration::from_millis(250)).await;
             }
         })
     }

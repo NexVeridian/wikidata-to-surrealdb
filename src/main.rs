@@ -38,7 +38,7 @@ async fn main() -> Result<(), Error> {
             None::<Surreal<Client>>,
             reader,
             Some(pb.clone()),
-            1_000,
+            100,
             1_000,
         )
         .await?;

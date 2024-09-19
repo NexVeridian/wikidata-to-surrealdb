@@ -11,7 +11,7 @@ services:
       - $DB_USER
       - --pass
       - $DB_PASSWORD
-      - file:/data/surrealdb
+      - surrealkv:data/surrealdb
     restart: always
     deploy:
       resources:
