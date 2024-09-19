@@ -144,13 +144,16 @@ impl CreateVersion {
 
         for line in lines {
             let json: Value = from_str(&line).expect("Failed to parse JSON");
-            let data = Entity::from_json(json).expect("Failed to parse JSON");
+            let data = match Entity::from_json(json) {
+                Ok(data) => data,
+                Err(_) => continue,
+            };
             let (claims, data) = EntityMini::from_entity(data);
             match data.id.clone().expect("No ID").tb.as_str() {
                 "Property" => property_vec.push(data),
                 "Lexeme" => lexeme_vec.push(data),
                 "Entity" => entity_vec.push(data),
-                _ => panic!("Unknown table"),
+                _ => continue,
             }
             claims_vec.push(claims);
         }
