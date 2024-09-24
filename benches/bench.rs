@@ -26,7 +26,9 @@ fn bench(c: &mut Criterion) {
             rt.block_on(async {
                 let db = inti_db().await.unwrap();
                 let reader = File_Format::new("json")
+                    .await
                     .reader("tests/data/bench.json")
+                    .await
                     .unwrap();
 
                 CreateVersion::Bulk

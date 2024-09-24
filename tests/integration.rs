@@ -15,9 +15,11 @@ async fn inti_db() -> Result<Surreal<Db>, Error> {
     Ok(db)
 }
 
-fn init_reader(file_format: &str, file_name: &str) -> Box<dyn BufRead> {
+async fn init_reader(file_format: &str, file_name: &str) -> Box<dyn BufRead> {
     File_Format::new(file_format)
+        .await
         .reader(&format!("./tests/data/{}.{}", file_name, file_format))
+        .await
         .unwrap()
 }
 
@@ -42,7 +44,7 @@ async fn entity_query(db: &Surreal<Db>) -> Result<Option<f32>, Error> {
 #[tokio::test]
 async fn entity_threaded(#[case] version: CreateVersion) -> Result<(), Error> {
     let db = inti_db().await?;
-    let reader = init_reader("json", "Entity");
+    let reader = init_reader("json", "Entity").await;
 
     version
         .run(Some(db.clone()), reader, None, 1_000, 100)
@@ -56,7 +58,7 @@ async fn entity_threaded(#[case] version: CreateVersion) -> Result<(), Error> {
 async fn entity_threaded_filter() -> Result<(), Error> {
     env::set_var("FILTER_PATH", "./tests/data/test_filter.surql");
     let db = inti_db().await?;
-    let reader = init_reader("json", "bench");
+    let reader = init_reader("json", "bench").await;
 
     CreateVersion::BulkFilter
         .run(Some(db.clone()), reader, None, 1_000, 100)
@@ -88,7 +90,7 @@ async fn property_query(db: &Surreal<Db>) -> Result<Option<f32>, Error> {
 #[tokio::test]
 async fn property_threaded(#[case] version: CreateVersion) -> Result<(), Error> {
     let db = inti_db().await?;
-    let reader = init_reader("json", "Property");
+    let reader = init_reader("json", "Property").await;
 
     version
         .run(Some(db.clone()), reader, None, 1_000, 100)

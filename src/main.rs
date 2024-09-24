@@ -46,7 +46,9 @@ async fn main() -> Result<(), Error> {
     sleep(Duration::from_secs(10)).await;
     let pb = init_progress_bar::create_pb().await;
     let reader = File_Format::new(get_wikidata_file_format().await)
-        .reader(get_wikidata_file_name().await)?;
+        .await
+        .reader(get_wikidata_file_name().await)
+        .await?;
 
     fs::create_dir_all("data/temp").await?;
     fs::remove_dir_all("data/temp").await?;

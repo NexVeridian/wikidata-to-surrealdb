@@ -11,14 +11,14 @@ pub enum File_Format {
     bz2,
 }
 impl File_Format {
-    pub fn new(file: &str) -> Self {
+    pub async fn new(file: &str) -> Self {
         match file {
             "json" => Self::json,
             "bz2" => Self::bz2,
             _ => panic!("Unknown file format"),
         }
     }
-    pub fn reader(self, file: &str) -> Result<Box<dyn BufRead>, Error> {
+    pub async fn reader(self, file: &str) -> Result<Box<dyn BufRead>, Error> {
         let file = File::open(file)?;
         match self {
             File_Format::json => Ok(Box::new(BufReader::new(file))),
