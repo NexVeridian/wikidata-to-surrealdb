@@ -64,7 +64,7 @@ Env string CREATE_VERSION must be in the enum CREATE_VERSION
 pub enum CreateVersion {
     #[default]
     Bulk,
-    /// must create a filter.surql file in the data directory
+    /// must create a `filter.surql` file in the data directory
     BulkFilter,
 }
 ```

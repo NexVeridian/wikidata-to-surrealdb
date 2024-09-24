@@ -1,9 +1,14 @@
 use backon::ExponentialBuilder;
-use lazy_static::lazy_static;
-use tokio::time::Duration;
+use tokio::{sync::OnceCell, time::Duration};
 
-lazy_static! {
-    pub static ref exponential: ExponentialBuilder = ExponentialBuilder::default()
-        .with_max_times(30)
-        .with_max_delay(Duration::from_secs(60));
+static BACKOFF_EXPONENTIAL: OnceCell<ExponentialBuilder> = OnceCell::const_new();
+
+pub async fn get_exponential() -> &'static ExponentialBuilder {
+    BACKOFF_EXPONENTIAL
+        .get_or_init(|| async {
+            ExponentialBuilder::default()
+                .with_max_times(30)
+                .with_max_delay(Duration::from_secs(60))
+        })
+        .await
 }

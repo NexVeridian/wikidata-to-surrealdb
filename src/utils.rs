@@ -3,11 +3,11 @@ use backon::Retryable;
 use core::panic;
 use futures::future::join_all;
 use indicatif::ProgressBar;
-use lazy_static::lazy_static;
 use rand::{distributions::Alphanumeric, Rng};
 use serde_json::{from_str, Value};
 use std::{env, io::BufRead};
 use surrealdb::{Connection, Surreal};
+use tokio::sync::OnceCell;
 use wikidata::Entity;
 
 pub mod init_backoff;
@@ -17,20 +17,33 @@ pub mod init_reader;
 mod tables;
 use tables::*;
 
-lazy_static! {
-    static ref OVERWRITE_DB: bool = env::var("OVERWRITE_DB")
-        .expect("OVERWRITE_DB not set")
-        .parse()
-        .expect("Failed to parse OVERWRITE_DB");
-    static ref FILTER_PATH: String =
-        env::var("FILTER_PATH").unwrap_or("data/filter.surql".to_string());
+static OVERWRITE_DB: OnceCell<bool> = OnceCell::const_new();
+static FILTER_PATH: OnceCell<String> = OnceCell::const_new();
+
+async fn get_overwrite_db() -> bool {
+    *OVERWRITE_DB
+        .get_or_init(|| async {
+            env::var("OVERWRITE_DB")
+                .expect("OVERWRITE_DB not set")
+                .parse::<bool>()
+                .expect("Failed to parse OVERWRITE_DB")
+        })
+        .await
+}
+
+async fn get_filter_path() -> &'static String {
+    FILTER_PATH
+        .get_or_init(|| async {
+            env::var("FILTER_PATH").unwrap_or("data/filter.surql".to_string())
+        })
+        .await
 }
 
 #[derive(Clone, Copy, Default)]
 pub enum CreateVersion {
     #[default]
     Bulk,
-    /// must create a filter.surql file in the root directory
+    /// must create a `filter.surql` file in the root directory
     BulkFilter,
 }
 
@@ -77,7 +90,7 @@ impl CreateVersion {
                 Some(db) => self.create_retry(&db, &chunk, &pb, batch_size).await,
                 None => {
                     let db = init_db::create_db_remote
-                        .retry(*init_backoff::exponential)
+                        .retry(*init_backoff::get_exponential().await)
                         .await
                         .expect("Failed to create remote db");
                     self.create_retry(&db, &chunk, &pb, batch_size).await
@@ -96,7 +109,7 @@ impl CreateVersion {
         batch_size: usize,
     ) -> Result<(), Error> {
         (|| async { self.create(db, chunk, pb, batch_size).await })
-            .retry(*init_backoff::exponential)
+            .retry(*init_backoff::get_exponential().await)
             .await
     }
 
@@ -137,7 +150,7 @@ impl CreateVersion {
                 Ok(data) => data,
                 Err(_) => continue,
             };
-            let (claims, data) = EntityMini::from_entity(data);
+            let (claims, data) = EntityMini::from_entity(data).await;
             match data.id.clone().expect("No ID").tb.as_str() {
                 "Property" => property_vec.push(data),
                 "Lexeme" => lexeme_vec.push(data),
@@ -147,7 +160,7 @@ impl CreateVersion {
             claims_vec.push(claims);
         }
 
-        if *OVERWRITE_DB {
+        if get_overwrite_db().await {
             db.upsert::<Vec<EntityMini>>("Entity")
                 .content(entity_vec)
                 .await?;
@@ -191,7 +204,7 @@ impl CreateVersion {
         let db_mem = init_db::create_db_mem().await?;
         self.create_bulk(&db_mem, lines, &None, batch_size).await?;
 
-        let filter = tokio::fs::read_to_string(&*FILTER_PATH).await?;
+        let filter = tokio::fs::read_to_string(get_filter_path().await).await?;
         db_mem.query(filter).await?;
 
         let file_name: String = rand::thread_rng()

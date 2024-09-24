@@ -4347,7 +4347,6 @@ dependencies = [
  "criterion",
  "futures 0.3.30",
  "indicatif",
- "lazy_static",
  "pprof",
  "rand",
  "rstest",

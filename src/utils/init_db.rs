@@ -1,6 +1,5 @@
 use anyhow::Error;
 use anyhow::Result;
-use lazy_static::lazy_static;
 use std::env;
 use surrealdb::{
     engine::{
@@ -10,20 +9,36 @@ use surrealdb::{
     opt::auth::Root,
     Surreal,
 };
+use tokio::sync::OnceCell;
 
-lazy_static! {
-    static ref DB_USER: String = env::var("DB_USER").expect("DB_USER not set");
-    static ref DB_PASSWORD: String = env::var("DB_PASSWORD").expect("DB_PASSWORD not set");
-    static ref WIKIDATA_DB_PORT: String =
-        env::var("WIKIDATA_DB_PORT").expect("WIKIDATA_DB_PORT not set");
+static DB_USER: OnceCell<String> = OnceCell::const_new();
+static DB_PASSWORD: OnceCell<String> = OnceCell::const_new();
+static WIKIDATA_DB_PORT: OnceCell<String> = OnceCell::const_new();
+
+pub async fn get_db_user() -> &'static String {
+    DB_USER
+        .get_or_init(|| async { env::var("DB_USER").expect("DB_USER not set") })
+        .await
+}
+
+pub async fn get_db_password() -> &'static String {
+    DB_PASSWORD
+        .get_or_init(|| async { env::var("DB_PASSWORD").expect("DB_PASSWORD not set") })
+        .await
+}
+
+pub async fn get_wikidata_db_port() -> &'static String {
+    WIKIDATA_DB_PORT
+        .get_or_init(|| async { env::var("WIKIDATA_DB_PORT").expect("WIKIDATA_DB_PORT not set") })
+        .await
 }
 
 pub async fn create_db_remote() -> Result<Surreal<Client>, Error> {
-    let db = Surreal::new::<Http>(WIKIDATA_DB_PORT.as_str()).await?;
+    let db = Surreal::new::<Http>(get_wikidata_db_port().await).await?;
 
     db.signin(Root {
-        username: &DB_USER,
-        password: &DB_PASSWORD,
+        username: get_db_user().await,
+        password: get_db_password().await,
     })
     .await?;
     db.use_ns("wikidata").use_db("wikidata").await?;
