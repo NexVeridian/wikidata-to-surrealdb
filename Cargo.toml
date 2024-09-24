@@ -16,6 +16,7 @@ bzip2 = { version = "0.4", features = ["tokio"] }
 lazy_static = "1.5"
 indicatif = "0.17"
 rand = "0.8"
+backon = { version = "1.2", features = ["tokio-sleep"] }
 
 [dev-dependencies]
 rstest = "0.22"

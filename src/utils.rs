@@ -1,4 +1,5 @@
 use anyhow::{Error, Result};
+use backon::Retryable;
 use core::panic;
 use futures::future::join_all;
 use indicatif::ProgressBar;
@@ -7,9 +8,9 @@ use rand::{distributions::Alphanumeric, Rng};
 use serde_json::{from_str, Value};
 use std::{env, io::BufRead};
 use surrealdb::{Connection, Surreal};
-use tokio::time::{sleep, Duration};
 use wikidata::Entity;
 
+pub mod init_backoff;
 pub mod init_db;
 pub mod init_progress_bar;
 pub mod init_reader;
@@ -65,43 +66,38 @@ impl CreateVersion {
     }
 
     fn spawn_chunk(
-        &self,
+        self,
         dbo: Option<Surreal<impl Connection>>,
         chunk: Vec<String>,
         pb: Option<ProgressBar>,
         batch_size: usize,
     ) -> tokio::task::JoinHandle<()> {
-        let create_version = *self;
-
         tokio::spawn(async move {
-            let mut retries = 0;
-
-            loop {
-                match dbo {
-                    Some(ref db) => {
-                        if create_version.create(db, &chunk, &pb, batch_size).await {
-                            break;
-                        }
-                    }
-                    None => {
-                        let db = match init_db::create_db_remote().await {
-                            Ok(db) => db,
-                            Err(_) => continue,
-                        };
-                        if create_version.create(&db, &chunk, &pb, batch_size).await {
-                            break;
-                        }
-                    }
+            match dbo {
+                Some(db) => self.create_retry(&db, &chunk, &pb, batch_size).await,
+                None => {
+                    let db = init_db::create_db_remote
+                        .retry(*init_backoff::exponential)
+                        .await
+                        .expect("Failed to create remote db");
+                    self.create_retry(&db, &chunk, &pb, batch_size).await
                 }
-
-                // Exponential backoff with cap at 60 seconds
-                if retries == 30 {
-                    panic!("Failed to create entities, too many retries");
-                }
-                sleep(Duration::from_millis(250) * 2_u32.pow(retries.min(8))).await;
-                retries += 1;
             }
+            .unwrap_or_else(|err| panic!("Failed to create entities, too many retries: {}", err));
         })
+    }
+
+    /// Retry create with exponential backoff
+    async fn create_retry(
+        self,
+        db: &Surreal<impl Connection>,
+        chunk: &[String],
+        pb: &Option<ProgressBar>,
+        batch_size: usize,
+    ) -> Result<(), Error> {
+        (|| async { self.create(db, chunk, pb, batch_size).await })
+            .retry(*init_backoff::exponential)
+            .await
     }
 
     async fn create(
@@ -110,19 +106,10 @@ impl CreateVersion {
         chunk: &[String],
         pb: &Option<ProgressBar>,
         batch_size: usize,
-    ) -> bool {
+    ) -> Result<(), Error> {
         match self {
-            CreateVersion::Bulk => self.create_bulk(db, chunk, pb, batch_size).await.is_ok(),
-            CreateVersion::BulkFilter => self
-                .create_bulk_filter(db, chunk, pb, batch_size)
-                .await
-                .is_ok(),
-            // CreateVersion::BulkFilter => {
-            //     if let Err(err) = self.create_bulk_filter(db, chunk, pb, batch_size).await {
-            //         panic!("Failed to create entities: {}", err);
-            //     }
-            //     true
-            // }
+            CreateVersion::Bulk => self.create_bulk(db, chunk, pb, batch_size).await,
+            CreateVersion::BulkFilter => self.create_bulk_filter(db, chunk, pb, batch_size).await,
         }
     }
 
