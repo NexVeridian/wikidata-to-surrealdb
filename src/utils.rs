@@ -17,19 +17,7 @@ pub mod init_reader;
 mod tables;
 use tables::*;
 
-static OVERWRITE_DB: OnceCell<bool> = OnceCell::const_new();
 static FILTER_PATH: OnceCell<String> = OnceCell::const_new();
-
-async fn get_overwrite_db() -> bool {
-    *OVERWRITE_DB
-        .get_or_init(|| async {
-            env::var("OVERWRITE_DB")
-                .expect("OVERWRITE_DB not set")
-                .parse::<bool>()
-                .expect("Failed to parse OVERWRITE_DB")
-        })
-        .await
-}
 
 async fn get_filter_path() -> &'static String {
     FILTER_PATH
@@ -160,33 +148,15 @@ impl CreateVersion {
             claims_vec.push(claims);
         }
 
-        if get_overwrite_db().await {
-            db.upsert::<Vec<EntityMini>>("Entity")
-                .content(entity_vec)
-                .await?;
-            db.upsert::<Vec<Claims>>("Claims")
-                .content(claims_vec)
-                .await?;
-            db.upsert::<Vec<EntityMini>>("Property")
-                .content(property_vec)
-                .await?;
-            db.upsert::<Vec<EntityMini>>("Lexeme")
-                .content(lexeme_vec)
-                .await?;
-        } else {
-            db.insert::<Vec<EntityMini>>("Entity")
-                .content(entity_vec)
-                .await?;
-            db.insert::<Vec<Claims>>("Claims")
-                .content(claims_vec)
-                .await?;
-            db.insert::<Vec<EntityMini>>("Property")
-                .content(property_vec)
-                .await?;
-            db.insert::<Vec<EntityMini>>("Lexeme")
-                .content(lexeme_vec)
-                .await?;
-        }
+        db.query("INSERT INTO Entity $entity_vec RETURN NONE;")
+            .bind(("entity_vec", entity_vec))
+            .query("INSERT INTO Claims $claims_vec RETURN NONE;")
+            .bind(("claims_vec", claims_vec))
+            .query("INSERT INTO Property $property_vec RETURN NONE;")
+            .bind(("property_vec", property_vec))
+            .query("INSERT INTO Lexeme $lexeme_vec RETURN NONE;")
+            .bind(("lexeme_vec", lexeme_vec))
+            .await?;
 
         if let Some(ref p) = pb {
             p.inc(batch_size as u64)

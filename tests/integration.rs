@@ -8,7 +8,6 @@ use wikidata_to_surrealdb::utils::*;
 
 async fn inti_db() -> Result<Surreal<Db>, Error> {
     env::set_var("WIKIDATA_LANG", "en");
-    env::set_var("OVERWRITE_DB", "false");
 
     let db = init_db::create_db_mem().await?;
 

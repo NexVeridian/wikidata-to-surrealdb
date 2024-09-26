@@ -53,8 +53,6 @@ WIKIDATA_FILE_FORMAT=bz2
 WIKIDATA_FILE_NAME=data/latest-all.json.bz2
 # If not using docker file for Wikidata to SurrealDB, use 0.0.0.0:8000
 WIKIDATA_DB_PORT=surrealdb:8000
-# true=overwrite existing data, false=skip if already exists
-OVERWRITE_DB=false
 CREATE_VERSION=Bulk
 #FILTER_PATH=data/filter.surql
 ```
