@@ -135,7 +135,8 @@
 
         packages = {
           default = my-crate;
-          inherit my-crate dockerImage;
+          inherit my-crate
+            dockerImage;
         };
 
         apps.default = flake-utils.lib.mkApp {

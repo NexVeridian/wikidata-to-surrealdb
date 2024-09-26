@@ -2,10 +2,12 @@ COMPOSE_FILES := surrealdb surrealdb.dev
 
 .PHONY: $(addprefix up-,$(COMPOSE_FILES)) $(addprefix down-,$(COMPOSE_FILES))
 
+up: up-surrealdb
 $(addprefix up-,$(COMPOSE_FILES)):
 	make down-$(subst up-,,$@)
 	docker compose -f docker-compose-$(subst up-,,$@).yml up --build --pull always -d
 
+down: down-surrealdb
 $(addprefix down-,$(COMPOSE_FILES)):
 	docker compose -f docker-compose-$(subst down-,,$@).yml down --volumes --remove-orphans
 	docker network prune -f
