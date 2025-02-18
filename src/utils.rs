@@ -109,8 +109,8 @@ impl CreateVersion {
         batch_size: usize,
     ) -> Result<(), Error> {
         match self {
-            CreateVersion::Bulk => self.create_bulk(db, chunk, pb, batch_size).await,
-            CreateVersion::BulkFilter => self.create_bulk_filter(db, chunk, pb, batch_size).await,
+            Self::Bulk => self.create_bulk(db, chunk, pb, batch_size).await,
+            Self::BulkFilter => self.create_bulk_filter(db, chunk, pb, batch_size).await,
         }
     }
 

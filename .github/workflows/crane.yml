@@ -1,6 +1,3 @@
-# https://github.com/nextest-rs/reuse-build-partition-example
-# https://keliris.dev/articles/setup-rust-github-actions
-
 name: crane
 
 on:
@@ -24,5 +21,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client login nex https://nix.nexveridian.com ${{ secrets.ATTIC_TOKEN }}
+      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client cache create wikidata-to-surrealdb || true
+      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client use wikidata-to-surrealdb
       - run: nix flake check --all-systems
+      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client push wikidata-to-surrealdb /nix/store/*/ || true

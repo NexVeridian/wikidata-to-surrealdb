@@ -21,8 +21,8 @@ impl File_Format {
     pub async fn reader(self, file: &str) -> Result<Box<dyn BufRead>, Error> {
         let file = File::open(file)?;
         match self {
-            File_Format::json => Ok(Box::new(BufReader::new(file))),
-            File_Format::bz2 => Ok(Box::new(BufReader::new(MultiBzDecoder::new(file)))),
+            Self::json => Ok(Box::new(BufReader::new(file))),
+            Self::bz2 => Ok(Box::new(BufReader::new(MultiBzDecoder::new(file)))),
         }
     }
 }

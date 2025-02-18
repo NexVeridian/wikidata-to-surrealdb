@@ -22,14 +22,12 @@ pub enum ClaimData {
 impl ClaimData {
     async fn from_cvd(cvd: ClaimValueData) -> Self {
         match cvd {
-            ClaimValueData::Item(qid) => ClaimData::Thing(Thing::from(("Entity", Id::from(qid.0)))),
+            ClaimValueData::Item(qid) => Self::Thing(Thing::from(("Entity", Id::from(qid.0)))),
             ClaimValueData::Property(pid) => {
-                ClaimData::Thing(Thing::from(("Property", Id::from(pid.0))))
+                Self::Thing(Thing::from(("Property", Id::from(pid.0))))
             }
-            ClaimValueData::Lexeme(lid) => {
-                ClaimData::Thing(Thing::from(("Lexeme", Id::from(lid.0))))
-            }
-            _ => ClaimData::ClaimValueData(cvd),
+            ClaimValueData::Lexeme(lid) => Self::Thing(Thing::from(("Lexeme", Id::from(lid.0)))),
+            _ => Self::ClaimValueData(cvd),
         }
     }
 }
@@ -46,7 +44,7 @@ pub struct Claim {
     pub value: ClaimData,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EntityMini {
     // Table: Entity, Property, Lexeme
     pub id: Option<Thing>,
