@@ -1,13 +1,13 @@
 use anyhow::{Error, Ok, Result};
 use rstest::rstest;
 use std::{env, io::BufRead};
-use surrealdb::{engine::local::Db, Surreal};
+use surrealdb::{Surreal, engine::local::Db};
 
 use init_reader::File_Format;
 use wikidata_to_surrealdb::utils::*;
 
 async fn inti_db() -> Result<Surreal<Db>, Error> {
-    env::set_var("WIKIDATA_LANG", "en");
+    unsafe { env::set_var("WIKIDATA_LANG", "en") };
 
     let db = init_db::create_db_mem().await?;
 
@@ -55,7 +55,7 @@ async fn entity_threaded(#[case] version: CreateVersion) -> Result<(), Error> {
 
 #[tokio::test]
 async fn entity_threaded_filter() -> Result<(), Error> {
-    env::set_var("FILTER_PATH", "./tests/data/test_filter.surql");
+    unsafe { env::set_var("FILTER_PATH", "./tests/data/test_filter.surql") };
     let db = inti_db().await?;
     let reader = init_reader("json", "bench").await;
 

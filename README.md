@@ -1,5 +1,5 @@
 # Wikidata to SurrealDB
-A tool for converting Wikidata dumps to a [SurrealDB](https://surrealdb.com/) database. Either From a bz2 or json file. 
+A tool for converting Wikidata dumps to a [SurrealDB](https://surrealdb.com/) database. Either From a bz2 or json file.
 
 The surrealdb database is ~2.6GB uncompressed or 0.5GB compressed, while the bz2 file is ~80GB, gzip file is ~130GB, and the uncompressed json file is over 1TB.
 
@@ -13,7 +13,7 @@ https://www.wikidata.org/wiki/Wikidata:Data_access
 ### [Download - latest-all.json.bz2](https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.bz2)
 
 ## From json file
-### Linked Data Interface: [Docs](https://www.wikidata.org/wiki/Wikidata:Data_access#Linked_Data_Interface_(URI)) 
+### Linked Data Interface: [Docs](https://www.wikidata.org/wiki/Wikidata:Data_access#Linked_Data_Interface_(URI))
 ```
 https://www.wikidata.org/wiki/Special:EntityData/Q60746544.json
 https://www.wikidata.org/wiki/Special:EntityData/P527.json
@@ -22,7 +22,7 @@ https://www.wikidata.org/wiki/Special:EntityData/P527.json
 # Install
 Copy [docker-compose-surrealdb.yml](./docker-compose-surrealdb.yml)
 
-Create data folder next to docker-compose.yml and .env, place data inside, and set the data type in .env   
+Create data folder next to docker-compose.yml and .env, place data inside, and set the data type in .env
 ```
 ├── data
 │   ├── Entity.json
@@ -30,19 +30,19 @@ Create data folder next to docker-compose.yml and .env, place data inside, and s
 │   ├── filter.surql
 │   ├── surrealdb
 │   └── temp
-├── Makefile
+├── justfile
 ├── docker-compose.yml
 └── .env
 ```
 
 ### Then run:
-`make up-surrealdb`
+`just up surrealdb`
 
 ### Exit with:
-`make down-surrealdb`
+`just down surrealdb`
 
 ## View Progress
-`make view`
+`just view`
 
 ## Example .env
 ```bash
@@ -112,7 +112,7 @@ pub struct Claim {
 ```rust
 pub enum ClaimData {
     // Entity, Property, Lexeme Tables
-    Thing(Thing), 
+    Thing(Thing),
     ClaimValueData(ClaimValueData),
 }
 ```

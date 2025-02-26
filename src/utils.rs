@@ -3,8 +3,8 @@ use backon::Retryable;
 use core::panic;
 use futures::future::join_all;
 use indicatif::ProgressBar;
-use rand::{distributions::Alphanumeric, Rng};
-use serde_json::{from_str, Value};
+use rand::{Rng, distributions::Alphanumeric};
+use serde_json::{Value, from_str};
 use std::{env, io::BufRead};
 use surrealdb::{Connection, Surreal};
 use tokio::sync::OnceCell;
@@ -158,7 +158,7 @@ impl CreateVersion {
             .bind(("lexeme_vec", lexeme_vec))
             .await?;
 
-        if let Some(ref p) = pb {
+        if let Some(p) = pb {
             p.inc(batch_size as u64)
         }
         Ok(())
@@ -192,7 +192,7 @@ impl CreateVersion {
 
         tokio::fs::remove_file(&file_path).await?;
 
-        if let Some(ref p) = pb {
+        if let Some(p) = pb {
             p.inc(batch_size as u64)
         }
         Ok(())

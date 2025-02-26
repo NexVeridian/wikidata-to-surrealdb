@@ -1,10 +1,10 @@
 use anyhow::{Error, Ok, Result};
 use std::env;
-use surrealdb::{engine::remote::http::Client, Surreal};
+use surrealdb::{Surreal, engine::remote::http::Client};
 use tokio::{
     fs,
     sync::OnceCell,
-    time::{sleep, Duration},
+    time::{Duration, sleep},
 };
 mod utils;
 use init_reader::File_Format;

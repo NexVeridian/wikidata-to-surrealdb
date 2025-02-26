@@ -44,11 +44,8 @@
               fpc.rustc
               fpc.clippy
               fpc.rust-src
-              fpc.rustc
               fpc.rustfmt
               fpc.rustc-codegen-cranelift-preview
-
-              fp.targets.wasm32-unknown-unknown.latest.rust-std
             ])
           )
         );
@@ -80,6 +77,7 @@
             ++ lib.optionals pkgs.stdenv.isDarwin [
               # Additional darwin specific inputs can be set here
               pkgs.libiconv
+              pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
             ];
 
           # Additional environment variables can be set directly

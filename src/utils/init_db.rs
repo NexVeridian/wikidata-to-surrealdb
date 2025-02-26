@@ -2,12 +2,12 @@ use anyhow::Error;
 use anyhow::Result;
 use std::env;
 use surrealdb::{
+    Surreal,
     engine::{
         local::{Db, Mem},
         remote::http::{Client, Http},
     },
     opt::auth::Root,
-    Surreal,
 };
 use tokio::sync::OnceCell;
 

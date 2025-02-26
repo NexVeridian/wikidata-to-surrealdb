@@ -1,16 +1,16 @@
 use anyhow::{Error, Ok, Result};
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use pprof::criterion::{Output, PProfProfiler};
 use std::{env, time::Duration};
-use surrealdb::{engine::local::Db, Surreal};
+use surrealdb::{Surreal, engine::local::Db};
 use tokio::runtime::Runtime;
 
 use init_reader::File_Format;
 use wikidata_to_surrealdb::utils::*;
 
 async fn inti_db() -> Result<Surreal<Db>, Error> {
-    env::set_var("WIKIDATA_LANG", "en");
-    env::set_var("OVERWRITE_DB", "true");
+    unsafe { env::set_var("WIKIDATA_LANG", "en") };
+    unsafe { env::set_var("OVERWRITE_DB", "true") };
 
     let db = init_db::create_db_mem().await?;
 

@@ -11,5 +11,6 @@ docker-compose-surrealdb.dev.yml
 docker-compose-surrealdb.yml
 dockerfile
 *.md
-Makefile
+justfile
+flake.lock
 flake.nix
