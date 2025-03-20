@@ -40,9 +40,9 @@ jobs:
       # Install Nix
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
-      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client login nex https://nix.nexveridian.com ${{ secrets.ATTIC_TOKEN }}
+      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client login nex https://nix.nexveridian.com ${{ secrets.ATTIC_TOKEN }} || true
       - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client cache create wikidata-to-surrealdb || true
-      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client use wikidata-to-surrealdb
+      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client use wikidata-to-surrealdb || true
 
       # Set up BuildKit Docker container builder to be able to build
       # multi-platform images and export cache
@@ -89,4 +89,7 @@ jobs:
           docker tag ${{ env.STRIP_REPO_USERNAME }}:latest ${{ env.REGISTRY }}/${{ env.REPO }}:latest
           docker push ${{ env.REGISTRY }}/${{ env.REPO }}:latest
 
-      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client push wikidata-to-surrealdb /nix/store/*/ || true
+      - run: |
+          for i in {1..10}; do
+            nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client push wikidata-to-surrealdb /nix/store/*/ && break || [ $i -eq 5 ] || sleep 5
+          done

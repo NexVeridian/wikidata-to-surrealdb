@@ -21,8 +21,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: DeterminateSystems/nix-installer-action@main
-      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client login nex https://nix.nexveridian.com ${{ secrets.ATTIC_TOKEN }}
+      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client login nex https://nix.nexveridian.com ${{ secrets.ATTIC_TOKEN }} || true
       - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client cache create wikidata-to-surrealdb || true
-      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client use wikidata-to-surrealdb
+      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client use wikidata-to-surrealdb || true
       - run: nix flake check --all-systems
-      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client push wikidata-to-surrealdb /nix/store/*/ || true
+      - run: |
+          for i in {1..10}; do
+            nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client push wikidata-to-surrealdb /nix/store/*/ && break || [ $i -eq 5 ] || sleep 5
+          done
