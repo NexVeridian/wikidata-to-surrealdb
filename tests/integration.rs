@@ -17,7 +17,7 @@ async fn inti_db() -> Result<Surreal<Db>, Error> {
 async fn init_reader(file_format: &str, file_name: &str) -> Box<dyn BufRead> {
     File_Format::new(file_format)
         .await
-        .reader(&format!("./tests/data/{}.{}", file_name, file_format))
+        .reader(&format!("./tests/data/{file_name}.{file_format}"))
         .await
         .unwrap()
 }

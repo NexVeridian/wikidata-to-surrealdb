@@ -3,7 +3,7 @@ use backon::Retryable;
 use core::panic;
 use futures::future::join_all;
 use indicatif::ProgressBar;
-use rand::{Rng, distributions::Alphanumeric};
+use rand::{Rng, distr::Alphanumeric};
 use serde_json::{Value, from_str};
 use std::{env, io::BufRead};
 use surrealdb::{Connection, Surreal};
@@ -177,13 +177,13 @@ impl CreateVersion {
         let filter = tokio::fs::read_to_string(get_filter_path().await).await?;
         db_mem.query(filter).await?;
 
-        let file_name: String = rand::thread_rng()
+        let file_name: String = rand::rng()
             .sample_iter(&Alphanumeric)
             .take(30)
             .map(char::from)
             .collect();
 
-        let file_path = format!("data/temp/{}.surql", file_name);
+        let file_path = format!("data/temp/{file_name}.surql");
 
         tokio::fs::create_dir_all("data/temp").await?;
 
