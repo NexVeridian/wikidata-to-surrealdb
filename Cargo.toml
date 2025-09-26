@@ -6,19 +6,19 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 anyhow = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-surrealdb = { version = "2.3.7", features = ["protocol-http", "kv-mem"] }
-tokio = { version = "1.47", features = ["fs", "time", "sync"] }
-futures = "0.3"
-wikidata = "1.1"
+backon = { version = "1.5", features = ["tokio-sleep"] }
 bzip2 = { version = "0.6" }
+futures = "0.3"
 indicatif = "0.18"
 rand = "0.9"
-backon = { version = "1.5", features = ["tokio-sleep"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+surrealdb = { version = "2.3.7", features = ["kv-mem", "protocol-http"] }
+tokio = { version = "1.47", features = ["fs", "sync", "time"] }
+wikidata = "1.1"
 
 [dev-dependencies]
-rstest = "0.26"
-surrealdb = { version = "2.3.7", features = ["kv-mem"] }
 criterion = { version = "0.7", features = ["async_tokio"] }
 pprof = { version = "0.15", features = ["criterion", "protobuf-codec"] }
+rstest = "0.26"
+surrealdb = { version = "2.3.7", features = ["kv-mem"] }
