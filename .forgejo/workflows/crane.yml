@@ -1,0 +1,65 @@
+name: crane
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+  schedule:
+    - cron: 0 0 * * 1
+
+env:
+  CARGO_TERM_COLOR: always
+  NIX_CONFIG: "experimental-features = nix-command flakes"
+
+jobs:
+  check-dependencies:
+    name: check-dependencies
+    runs-on: nix
+    permissions:
+      contents: read
+      id-token: write
+      actions: write
+
+    steps:
+      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client login nex https://nix.nexveridian.com ${{ secrets.ATTIC_TOKEN }} || true
+      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client cache create wikidata-to-surrealdb || true
+      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client cache configure wikidata-to-surrealdb -- --priority 30 || true
+      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client use wikidata-to-surrealdb || true
+
+      - name: Install Node.js
+        run: |
+          mkdir -p ~/.local/bin
+          nix build -I nixpkgs=channel:nixos-unstable nixpkgs#nodejs_24 -o ~/.local/nodejs
+          ln -sf ~/.local/nodejs/bin/node ~/.local/bin/node
+          ln -sf ~/.local/nodejs/bin/npm ~/.local/bin/npm
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - uses: actions/checkout@v5
+
+      - run: nix build -I nixpkgs=channel:nixos-unstable nixpkgs#nix-fast-build
+
+      - name: check
+        run: |
+          nix run -I nixpkgs=channel:nixos-unstable nixpkgs#nix-fast-build -- --no-nom --skip-cached
+
+      - name: Push to attic
+        if: always()
+        run: |
+          nix shell nixpkgs/nixos-unstable#findutils nixpkgs/nixos-unstable#util-linux nixpkgs/nixos-unstable#coreutils -c bash -c '
+            valid_paths=$(find /nix/store -maxdepth 1 -type d -name "*-*" | \
+              head -1000 | \
+              xargs -I {} -P $(nproc) sh -c "nix path-info \"\$1\" >/dev/null 2>&1 && echo \"\$1\"" _ {} | \
+              tr "\n" " ")
+
+            if [ -n "$valid_paths" ]; then
+              for i in {1..10}; do
+                nix run nixpkgs/nixos-unstable#attic-client push wikidata-to-surrealdb $valid_paths && break || [ $i -eq 10 ] || sleep 5
+              done
+            fi
+          '
+
+  call-docker:
+    name: call-docker
+    needs: [check-dependencies]
+    runs-on: nix
+    uses: ./.forgejo/workflows/docker.yml

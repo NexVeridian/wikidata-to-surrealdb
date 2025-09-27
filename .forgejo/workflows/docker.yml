@@ -1,0 +1,121 @@
+name: docker
+
+on:
+  workflow_call:
+
+env:
+  REGISTRY: git.nexveridian.com
+  IMAGE_NAME: ${{ github.repository }}
+  NIX_CONFIG: "experimental-features = nix-command flakes"
+  CONTAINER_TOKEN: ${{ secrets.CONTAINER_REGISTRY_TOKEN }}
+
+jobs:
+  build:
+    runs-on: nix
+    if: forge.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client login nex https://nix.nexveridian.com ${{ secrets.ATTIC_TOKEN }} || true
+      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client cache create wikidata-to-surrealdb || true
+      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client cache configure wikidata-to-surrealdb -- --priority 30 || true
+      - run: nix run -I nixpkgs=channel:nixos-unstable nixpkgs#attic-client use wikidata-to-surrealdb || true
+
+      - name: Install Node.js
+        run: |
+          mkdir -p ~/.local/bin
+          nix build -I nixpkgs=channel:nixos-unstable nixpkgs#nodejs_24 -o ~/.local/nodejs
+          ln -sf ~/.local/nodejs/bin/node ~/.local/bin/node
+          ln -sf ~/.local/nodejs/bin/npm ~/.local/bin/npm
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - uses: actions/checkout@v5
+
+      - name: Install skopeo
+        run: |
+          mkdir -p ~/.local/bin
+          nix build -I nixpkgs=channel:nixos-unstable nixpkgs#skopeo -o ~/.local/skopeo
+          ln -sf ~/.local/skopeo/bin/skopeo ~/.local/bin/skopeo
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Build Nix package
+        run: nix build .#dockerImage
+
+      - name: Prepare repository variables
+        run: |
+          echo "REPO=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+          echo "OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> ${GITHUB_ENV}
+          # Extract just the repository name (everything after the last slash)
+          REPO_NAME=${GITHUB_REPOSITORY##*/}
+          echo "IMAGE_NAME=${REPO_NAME,,}" >> ${GITHUB_ENV}
+
+      - name: Setup skopeo policy and push image
+        run: |
+          # configure container policy to accept insecure registry
+          mkdir -p ~/.config/containers
+          cat > ~/.config/containers/policy.json <<EOF
+          {
+            "default": [{"type":"insecureAcceptAnything"}]
+          }
+          EOF
+
+          # ensure all required directories exist with proper permissions
+          mkdir -p /tmp/skopeo /var/tmp ~/.local/share/containers
+          chmod 755 /tmp/skopeo /var/tmp || true
+
+          # set multiple environment variables for skopeo temporary directories
+          export TMPDIR=/tmp/skopeo
+          export TMP=/tmp/skopeo
+          export TEMP=/tmp/skopeo
+          export XDG_RUNTIME_DIR=/tmp/skopeo
+
+          # The Nix build creates a compressed tar.gz file, we need to extract it first
+          cd /tmp/skopeo
+          cp ${GITHUB_WORKSPACE}/result ./docker-image.tar.gz
+          gunzip docker-image.tar.gz
+
+          # Create authentication file for skopeo
+          mkdir -p ~/.docker
+          cat > ~/.docker/config.json <<EOF
+          {
+            "auths": {
+              "${{ env.REGISTRY }}": {
+                "auth": "$(echo -n "${{ github.actor }}:${{ env.CONTAINER_TOKEN }}" | base64 -w 0)"
+              }
+            }
+          }
+          EOF
+
+          # Also create auth for containers directory
+          mkdir -p ~/.config/containers
+          cp ~/.docker/config.json ~/.config/containers/auth.json
+
+          # Test registry connectivity
+          skopeo login --username "${{ github.actor }}" --password "${{ env.CONTAINER_TOKEN }}" "${{ env.REGISTRY }}"
+
+          # Push image using Personal Access Token
+          skopeo copy \
+            --dest-tls-verify=false \
+            --tmpdir /tmp/skopeo \
+            --dest-creds "${{ github.actor }}:${{ env.CONTAINER_TOKEN }}" \
+            docker-archive:/tmp/skopeo/docker-image.tar \
+            docker://${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Push to attic
+        if: always()
+        run: |
+          nix shell nixpkgs/nixos-unstable#findutils nixpkgs/nixos-unstable#util-linux nixpkgs/nixos-unstable#coreutils -c bash -c '
+            valid_paths=$(find /nix/store -maxdepth 1 -type d -name "*-*" | \
+              head -1000 | \
+              xargs -I {} -P $(nproc) sh -c "nix path-info \"\$1\" >/dev/null 2>&1 && echo \"\$1\"" _ {} | \
+              tr "\n" " ")
+
+            if [ -n "$valid_paths" ]; then
+              for i in {1..10}; do
+                nix run nixpkgs/nixos-unstable#attic-client push wikidata-to-surrealdb $valid_paths && break || [ $i -eq 10 ] || sleep 5
+              done
+            fi
+          '
