@@ -35,6 +35,10 @@ precommit-shared:
     cargo fmt --all
     just clippy
 
+alias fmt := clippy
 clippy:
-    cargo clippy --all --fix --allow-dirty -- -W clippy::nursery -W rust-2018-idioms \
+    cargo fmt --all
+    tombi fmt
+    cargo clippy --all-targets --workspace --fix --allow-dirty -- -W clippy::nursery -W rust-2018-idioms \
         -A clippy::future_not_send -A clippy::option_if_let_else -A clippy::or_fun_call
+    cargo machete --fix

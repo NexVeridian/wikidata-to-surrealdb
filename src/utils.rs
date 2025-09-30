@@ -1,11 +1,12 @@
+use core::panic;
+use std::{env, io::BufRead};
+
 use anyhow::{Error, Result};
 use backon::Retryable;
-use core::panic;
 use futures::future::join_all;
 use indicatif::ProgressBar;
 use rand::{Rng, distr::Alphanumeric};
 use serde_json::{Value, from_str};
-use std::{env, io::BufRead};
 use surrealdb::{Connection, Surreal};
 use tokio::sync::OnceCell;
 use wikidata::Entity;

@@ -1,5 +1,6 @@
-use anyhow::{Error, Ok, Result};
 use std::env;
+
+use anyhow::{Error, Ok, Result};
 use surrealdb::{Surreal, engine::remote::http::Client};
 use tokio::{
     fs,

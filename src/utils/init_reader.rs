@@ -1,9 +1,10 @@
-use anyhow::{Error, Result};
-use bzip2::read::MultiBzDecoder;
 use std::{
     fs::File,
     io::{BufRead, BufReader},
 };
+
+use anyhow::{Error, Result};
+use bzip2::read::MultiBzDecoder;
 
 #[allow(non_camel_case_types)]
 pub enum File_Format {

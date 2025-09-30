@@ -1,6 +1,6 @@
-use anyhow::Error;
-use anyhow::Result;
 use std::env;
+
+use anyhow::{Error, Result};
 use surrealdb::{
     Surreal,
     engine::{

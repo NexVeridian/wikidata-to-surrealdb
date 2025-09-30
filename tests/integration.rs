@@ -1,9 +1,9 @@
-use anyhow::{Error, Ok, Result};
-use rstest::rstest;
 use std::{env, io::BufRead};
-use surrealdb::{Surreal, engine::local::Db};
 
+use anyhow::{Error, Ok, Result};
 use init_reader::File_Format;
+use rstest::rstest;
+use surrealdb::{Surreal, engine::local::Db};
 use wikidata_to_surrealdb::utils::*;
 
 async fn inti_db() -> Result<Surreal<Db>, Error> {

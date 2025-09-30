@@ -1,6 +1,7 @@
+use std::env;
+
 use futures::future::join_all;
 use serde::{Deserialize, Serialize};
-use std::env;
 use surrealdb::sql::{Id, Thing};
 use tokio::sync::OnceCell;
 use wikidata::{ClaimValue, ClaimValueData, Entity, Lang, Pid, WikiId};
