@@ -64,7 +64,7 @@ jobs:
 
   build-docker:
     needs: [check-dependencies]
-    if: forge.ref == 'refs/heads/main'
+    if: forge.ref == 'refs/heads/main' || forge.event_name == 'Scheduled'
     name: build-docker
     runs-on: nix
     permissions:
